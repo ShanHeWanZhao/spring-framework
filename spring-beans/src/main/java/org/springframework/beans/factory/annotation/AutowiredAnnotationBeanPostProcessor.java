@@ -120,6 +120,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 
 	protected final Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * 支持@Autowired，@Value，@javax.inject.Inject 注解
+	 */
 	private final Set<Class<? extends Annotation>> autowiredAnnotationTypes = new LinkedHashSet<>(4);
 
 	private String requiredParameterName = "required";
@@ -444,6 +447,7 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
 				AnnotationAttributes ann = findAutowiredAnnotation(field);
 				if (ann != null) {
+					// 静态字段不支持
 					if (Modifier.isStatic(field.getModifiers())) {
 						if (logger.isInfoEnabled()) {
 							logger.info("Autowired annotation is not supported on static fields: " + field);

@@ -58,6 +58,7 @@ public abstract class ScopedProxyUtils {
 
 		String originalBeanName = definition.getBeanName();
 		BeanDefinition targetDefinition = definition.getBeanDefinition();
+		// scopedTarget. + 原beanName
 		String targetBeanName = getTargetBeanName(originalBeanName);
 
 		// Create a scoped proxy definition for the original bean name,
@@ -69,11 +70,11 @@ public abstract class ScopedProxyUtils {
 		proxyDefinition.setRole(targetDefinition.getRole());
 
 		proxyDefinition.getPropertyValues().add("targetBeanName", targetBeanName);
-		if (proxyTargetClass) {
-			targetDefinition.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
+		if (proxyTargetClass) { // cglib proxy
+ 			targetDefinition.setAttribute(AutoProxyUtils.PRESERVE_TARGET_CLASS_ATTRIBUTE, Boolean.TRUE);
 			// ScopedProxyFactoryBean's "proxyTargetClass" default is TRUE, so we don't need to set it explicitly here.
 		}
-		else {
+		else { // jdk proxy
 			proxyDefinition.getPropertyValues().add("proxyTargetClass", Boolean.FALSE);
 		}
 

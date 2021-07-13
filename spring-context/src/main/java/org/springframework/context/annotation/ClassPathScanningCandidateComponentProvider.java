@@ -415,6 +415,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
+			// 例如扫描com.litb.business.pms包 -> classpath*:com/litb/business/pms/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
@@ -426,7 +427,9 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				}
 				if (resource.isReadable()) {
 					try {
+						// 使用asm直接将字节码的信息解析出来（包括所有注解（父注解等））
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
+						// 对metaData进行判断，是否纳入容器中
 						if (isCandidateComponent(metadataReader)) {
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setSource(resource);
@@ -493,6 +496,7 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 		}
 		for (TypeFilter tf : this.includeFilters) {
 			if (tf.match(metadataReader, getMetadataReaderFactory())) {
+				// @Condition注解相关判断
 				return isConditionMatch(metadataReader);
 			}
 		}

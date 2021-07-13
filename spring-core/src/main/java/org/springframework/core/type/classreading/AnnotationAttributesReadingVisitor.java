@@ -85,6 +85,7 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
 							for (Annotation ann : visited) {
 								metaAnnotationTypeNames.add(ann.annotationType().getName());
 							}
+							// 原注解和其所有的元注解的缓存map
 							this.metaAnnotationMap.put(annotationClass.getName(), metaAnnotationTypeNames);
 						}
 					}
@@ -98,6 +99,11 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
 		}
 	}
 
+	/**
+	 * 递归回去注解上的元注解
+	 * @param visited  收集到的注解
+	 * @param annotation 目标注解
+	 */
 	private void recursivelyCollectMetaAnnotations(Set<Annotation> visited, Annotation annotation) {
 		Class<? extends Annotation> annotationType = annotation.annotationType();
 		String annotationName = annotationType.getName();
@@ -107,6 +113,7 @@ final class AnnotationAttributesReadingVisitor extends RecursiveAnnotationAttrib
 				// IllegalAccessExceptions otherwise, and we don't want to mess with
 				// accessibility in a SecurityManager environment.
 				if (Modifier.isPublic(annotationType.getModifiers())) {
+					// 将当前注解和其属性封装到多值map里
 					this.attributesMap.add(annotationName,
 							AnnotationUtils.getAnnotationAttributes(annotation, false, true));
 				}

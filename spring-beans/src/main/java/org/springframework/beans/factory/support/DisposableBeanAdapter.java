@@ -104,10 +104,14 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 		Assert.notNull(bean, "Disposable bean must not be null");
 		this.bean = bean;
 		this.beanName = beanName;
+		/*
+			实现了DisposableBean接口的bean的销毁方法就是destroy，在检测它是否指定了其他销毁方法
+		 */
 		this.invokeDisposableBean =
 				(this.bean instanceof DisposableBean && !beanDefinition.isExternallyManagedDestroyMethod("destroy"));
 		this.nonPublicAccessAllowed = beanDefinition.isNonPublicAccessAllowed();
 		this.acc = acc;
+		// destroy方法为(inferred)，开始自动寻找close()方法或shutdown()方法
 		String destroyMethodName = inferDestroyMethodIfNecessary(bean, beanDefinition);
 		if (destroyMethodName != null && !(this.invokeDisposableBean && "destroy".equals(destroyMethodName)) &&
 				!beanDefinition.isExternallyManagedDestroyMethod(destroyMethodName)) {
@@ -133,6 +137,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 			}
 			this.destroyMethod = destroyMethod;
 		}
+		// destroy相关的BeanPostProcessor过滤，仅剩下当前bean具有的destroy方法的BeanPostProcessor
 		this.beanPostProcessors = filterPostProcessors(postProcessors, bean);
 	}
 
@@ -385,6 +390,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 			return true;
 		}
 		String destroyMethodName = beanDefinition.getDestroyMethodName();
+		// destroy方法为(inferred)，则自动寻找close()方法或shutdown()方法
 		if (AbstractBeanDefinition.INFER_METHOD.equals(destroyMethodName)) {
 			return (ClassUtils.hasMethod(bean.getClass(), CLOSE_METHOD_NAME) ||
 					ClassUtils.hasMethod(bean.getClass(), SHUTDOWN_METHOD_NAME));

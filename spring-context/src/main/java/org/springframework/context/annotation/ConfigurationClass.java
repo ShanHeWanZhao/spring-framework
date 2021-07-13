@@ -212,6 +212,7 @@ final class ConfigurationClass {
 
 	public void validate(ProblemReporter problemReporter) {
 		// A configuration class may not be final (CGLIB limitation)
+		// @Configuration不能是final的，因为 @Configuration会被cglib代理，final是不能被cglib代理的
 		if (getMetadata().isAnnotated(Configuration.class.getName())) {
 			if (getMetadata().isFinal()) {
 				problemReporter.error(new FinalConfigurationProblem());

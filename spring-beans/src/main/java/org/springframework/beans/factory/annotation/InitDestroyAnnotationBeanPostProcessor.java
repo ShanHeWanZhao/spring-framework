@@ -79,9 +79,15 @@ public class InitDestroyAnnotationBeanPostProcessor
 
 	protected transient Log logger = LogFactory.getLog(getClass());
 
+	/**
+	 * javax.annotation.PostConstruct 注解
+	 */
 	@Nullable
 	private Class<? extends Annotation> initAnnotationType;
 
+	/**
+	 * javax.annotation.PreDestroy 注解
+	 */
 	@Nullable
 	private Class<? extends Annotation> destroyAnnotationType;
 
@@ -187,6 +193,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 				metadata = this.lifecycleMetadataCache.get(clazz);
 				if (metadata == null) {
 					metadata = buildLifecycleMetadata(clazz);
+					// 缓存类里面的生命周期相关方法
 					this.lifecycleMetadataCache.put(clazz, metadata);
 				}
 				return metadata;
@@ -195,6 +202,7 @@ public class InitDestroyAnnotationBeanPostProcessor
 		return metadata;
 	}
 
+	// 处理PostConstruct和PreDestroy相关方法
 	private LifecycleMetadata buildLifecycleMetadata(final Class<?> clazz) {
 		List<LifecycleElement> initMethods = new ArrayList<>();
 		List<LifecycleElement> destroyMethods = new ArrayList<>();

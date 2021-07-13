@@ -136,6 +136,9 @@ class ConfigurationClassParser {
 
 	private final List<String> propertySourceNames = new ArrayList<>();
 
+	/**
+	 * org.springframework.context.annotation.Import 注解的处理结果
+	 */
 	private final ImportStack importStack = new ImportStack();
 
 	private final DeferredImportSelectorHandler deferredImportSelectorHandler = new DeferredImportSelectorHandler();
@@ -164,7 +167,7 @@ class ConfigurationClassParser {
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
-				if (bd instanceof AnnotatedBeanDefinition) {
+				if (bd instanceof AnnotatedBeanDefinition) { // 注解bean解析
 					parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
 				}
 				else if (bd instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) bd).hasBeanClass()) {
@@ -182,7 +185,7 @@ class ConfigurationClassParser {
 						"Failed to parse configuration class [" + bd.getBeanClassName() + "]", ex);
 			}
 		}
-
+		// 等待上面的处理完后，再专门处理DeferredImportSelector
 		this.deferredImportSelectorHandler.process();
 	}
 
@@ -215,7 +218,13 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 处理full和lite的组件开始
+	 * @param configClass
+	 * @throws IOException
+	 */
 	protected void processConfigurationClass(ConfigurationClass configClass) throws IOException {
+		// 解析@Conditional注解，判断是否该跳过
 		if (this.conditionEvaluator.shouldSkip(configClass.getMetadata(), ConfigurationPhase.PARSE_CONFIGURATION)) {
 			return;
 		}
@@ -265,6 +274,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @PropertySource annotations
+		// 处理 @PropertySource注解
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
@@ -278,20 +288,24 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
+		// 处理@ComponentScan注解
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
+				// 执行 @ComponentScan，扫描
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
+				// 继续检查这些新扫描的出来的BeanDefinition，递归处理
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {
 						bdCand = holder.getBeanDefinition();
 					}
+					// 递归继续解析新扫描出来的BeanDefinition
 					if (ConfigurationClassUtils.checkConfigurationClassCandidate(bdCand, this.metadataReaderFactory)) {
 						parse(bdCand.getBeanClassName(), holder.getBeanName());
 					}
@@ -300,9 +314,11 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
+		// 处理@Import注解
 		processImports(configClass, sourceClass, getImports(sourceClass), true);
 
 		// Process any @ImportResource annotations
+		// 处理 @ImportResource注解
 		AnnotationAttributes importResource =
 				AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
 		if (importResource != null) {
@@ -315,6 +331,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process individual @Bean methods
+		// 处理有@Bean注解的方法，将这种方法封装为BeanMethod对象并加入beanMethods缓存里，等待后续的处理
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
 			configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));
@@ -543,7 +560,7 @@ class ConfigurationClassParser {
 	private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
 			Collection<SourceClass> importCandidates, boolean checkForCircularImports) {
 
-		if (importCandidates.isEmpty()) {
+		if (importCandidates.isEmpty()) { // @Import导入为空，就直接返回
 			return;
 		}
 
@@ -554,21 +571,24 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
+					// ImportSelector解析
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
 						ImportSelector selector = BeanUtils.instantiateClass(candidateClass, ImportSelector.class);
+						// aware注入
 						ParserStrategyUtils.invokeAwareMethods(
 								selector, this.environment, this.resourceLoader, this.registry);
-						if (selector instanceof DeferredImportSelector) {
+						if (selector instanceof DeferredImportSelector) { // DeferredImportSelector暂不处理
 							this.deferredImportSelectorHandler.handle(configClass, (DeferredImportSelector) selector);
 						}
-						else {
+						else { // 其他ImportSelector直接在这处理完毕
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
+					// ImportBeanDefinitionRegistrar解析
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
@@ -687,11 +707,15 @@ class ConfigurationClassParser {
 	@SuppressWarnings("serial")
 	private static class ImportStack extends ArrayDeque<ConfigurationClass> implements ImportRegistry {
 
+		/**
+		 * 多值map，因为一个类可以被@Import重复导入
+		 */
 		private final MultiValueMap<String, AnnotationMetadata> imports = new LinkedMultiValueMap<>();
 
 		public void registerImport(AnnotationMetadata importingClass, String importedClass) {
 			this.imports.add(importedClass, importingClass);
 		}
+
 
 		@Override
 		@Nullable

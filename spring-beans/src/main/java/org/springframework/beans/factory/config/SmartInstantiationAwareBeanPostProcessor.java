@@ -80,7 +80,8 @@ public interface SmartInstantiationAwareBeanPostProcessor extends InstantiationA
 	 * return the raw bean instance from those subsequent callbacks (if the wrapper
 	 * for the affected bean has been built for a call to this method already,
 	 * it will be exposes as final bean reference by default).
-	 * <p>The default implementation returns the given {@code bean} as-is.
+	 * <p>The default implementation returns the given {@code bean} as-is. <p/>
+	 * 为了解决循环依赖期间，bean还没完全创建好但是又需要被引用，就算是aop的bean引用，也会在这里返回
 	 * @param bean the raw bean instance
 	 * @param beanName the name of the bean
 	 * @return the object to expose as bean reference

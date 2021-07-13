@@ -58,7 +58,10 @@ public class ScopedProxyFactoryBean extends ProxyConfig
 	/** The TargetSource that manages scoping. */
 	private final SimpleBeanTargetSource scopedTargetSource = new SimpleBeanTargetSource();
 
-	/** The name of the target bean. */
+	/** The name of the target bean. <p/>
+	 * scopedTarget. + 原beanName
+	 *
+	 */
 	@Nullable
 	private String targetBeanName;
 
@@ -111,7 +114,16 @@ public class ScopedProxyFactoryBean extends ProxyConfig
 		pf.addAdvice(new DelegatingIntroductionInterceptor(scopedObject));
 
 		// Add the AopInfrastructureBean marker to indicate that the scoped proxy
-		// itself is not subject to auto-proxying! Only its target bean is.
+		// itself is not subject to auto-proxying! only its target bean is.
+		// 设置该bean不会被其他自动代理 代理了
+		/*
+		 * 为什么会这么设置？
+		 * 	因为这个bean本来就应该是个代理增强类，它所需要增强的地方也是唯一的地方就是找到目标scope里真实的bean，并将这个代理bean
+		 * 的一切行为转移到这个目标scope里真实的bean去
+		 *
+		 * 例：session域的bean，该bean被自动注入的就应该是这个代理bean，这个bean存在的木的也只是找到session域
+		 * 		里对应的真实bean，然后调用该bean的方法全走session域的真实bean的方法，且由这个真实bean来进行其他自动代理的增强
+ 		 */
 		pf.addInterface(AopInfrastructureBean.class);
 
 		this.proxy = pf.getProxy(cbf.getBeanClassLoader());

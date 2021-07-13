@@ -95,6 +95,7 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		}
 
 		// First, see if we have a cached value.
+		// 先看看有没有缓存
 		Object cacheKey = getCacheKey(method, targetClass);
 		TransactionAttribute cached = this.attributeCache.get(cacheKey);
 		if (cached != null) {
@@ -150,6 +151,7 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 	@Nullable
 	protected TransactionAttribute computeTransactionAttribute(Method method, @Nullable Class<?> targetClass) {
 		// Don't allow no-public methods as required.
+		// 默认非public方法不支持
 		if (allowPublicMethodsOnly() && !Modifier.isPublic(method.getModifiers())) {
 			return null;
 		}
@@ -159,18 +161,20 @@ public abstract class AbstractFallbackTransactionAttributeSource implements Tran
 		Method specificMethod = AopUtils.getMostSpecificMethod(method, targetClass);
 
 		// First try is the method in the target class.
+		// 先解析方法上的解析事务注解
 		TransactionAttribute txAttr = findTransactionAttribute(specificMethod);
 		if (txAttr != null) {
 			return txAttr;
 		}
 
 		// Second try is the transaction attribute on the target class.
+		// 方法上没有，在解析类上的事务注解
 		txAttr = findTransactionAttribute(specificMethod.getDeclaringClass());
 		if (txAttr != null && ClassUtils.isUserLevelMethod(method)) {
 			return txAttr;
 		}
 
-		if (specificMethod != method) {
+		if (specificMethod != method) { // 都没有，则再去原始的方法和类上寻找注解
 			// Fallback is to look at the original method.
 			txAttr = findTransactionAttribute(method);
 			if (txAttr != null) {

@@ -268,12 +268,14 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 			txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
 			con = txObject.getConnectionHolder().getConnection();
 
+			// 设置隔离级别
 			Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
 			txObject.setPreviousIsolationLevel(previousIsolationLevel);
 
 			// Switch to manual commit if necessary. This is very expensive in some JDBC drivers,
 			// so we don't want to do it unnecessarily (for example if we've explicitly
 			// configured the connection pool to set it already).
+			// 当前Connection设为手动提交
 			if (con.getAutoCommit()) {
 				txObject.setMustRestoreAutoCommit(true);
 				if (logger.isDebugEnabled()) {
@@ -282,15 +284,19 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 				con.setAutoCommit(false);
 			}
 
+			// readOnly 设置
 			prepareTransactionalConnection(con, definition);
+			// 激活事务
 			txObject.getConnectionHolder().setTransactionActive(true);
 
+			// 确定timeout
 			int timeout = determineTimeout(definition);
 			if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
 				txObject.getConnectionHolder().setTimeoutInSeconds(timeout);
 			}
 
 			// Bind the connection holder to the thread.
+			// 绑定Connection到当前线程
 			if (txObject.isNewConnectionHolder()) {
 				TransactionSynchronizationManager.bindResource(obtainDataSource(), txObject.getConnectionHolder());
 			}

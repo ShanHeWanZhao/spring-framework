@@ -55,6 +55,7 @@ public class DefaultAdvisorChainFactory implements AdvisorChainFactory, Serializ
 		// but we need to preserve order in the ultimate list.
 		AdvisorAdapterRegistry registry = GlobalAdvisorAdapterRegistry.getInstance();
 		Advisor[] advisors = config.getAdvisors();
+		// 拦截器列表
 		List<Object> interceptorList = new ArrayList<>(advisors.length);
 		Class<?> actualClass = (targetClass != null ? targetClass : method.getDeclaringClass());
 		Boolean hasIntroductions = null;

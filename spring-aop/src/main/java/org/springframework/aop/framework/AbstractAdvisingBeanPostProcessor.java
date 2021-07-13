@@ -68,6 +68,9 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			return bean;
 		}
 
+		/* 判断当前的bean是否已经是个代理类了
+				已近是代理类的bean，就不能再重新创建proxy，直接用现有的，把advisor加入到list中就行
+		 */
 		if (bean instanceof Advised) {
 			Advised advised = (Advised) bean;
 			if (!advised.isFrozen() && isEligible(AopUtils.getTargetClass(bean))) {

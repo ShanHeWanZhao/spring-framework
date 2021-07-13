@@ -207,6 +207,7 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 	 * @see #handlerMethodsInitialized
 	 */
 	protected void initHandlerMethods() {
+		// 相当于获取了所有的bean的beanName
 		for (String beanName : getCandidateBeanNames()) {
 			if (!beanName.startsWith(SCOPED_TARGET_NAME_PREFIX)) {
 				processCandidateBean(beanName);
@@ -249,6 +250,8 @@ public abstract class AbstractHandlerMethodMapping<T> extends AbstractHandlerMap
 				logger.trace("Could not resolve type for bean '" + beanName + "'", ex);
 			}
 		}
+
+		// @Controller和@RequestMapping注解在类上，都算handler
 		if (beanType != null && isHandler(beanType)) {
 			detectHandlerMethods(beanName);
 		}

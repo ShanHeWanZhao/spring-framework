@@ -35,6 +35,12 @@ import org.springframework.util.ObjectUtils;
 @SuppressWarnings("serial")
 abstract class TransactionAttributeSourcePointcut extends StaticMethodMatcherPointcut implements Serializable {
 
+	/**
+	 * 方法上有Transactional注解就会返回true
+	 * @param method      the candidate method
+	 * @param targetClass the target class
+	 * @return
+	 */
 	@Override
 	public boolean matches(Method method, Class<?> targetClass) {
 		if (TransactionalProxy.class.isAssignableFrom(targetClass) ||

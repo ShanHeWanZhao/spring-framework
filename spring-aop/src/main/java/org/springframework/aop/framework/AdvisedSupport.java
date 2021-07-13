@@ -365,6 +365,7 @@ public class AdvisedSupport extends ProxyConfig implements Advised {
 		}
 		this.advisors.add(pos, advisor);
 		updateAdvisorArray();
+		// 每次添加advisor，就清除方法增强的缓存，让下次从新获取拦截
 		adviceChanged();
 	}
 

@@ -267,7 +267,8 @@ public abstract class TransactionSynchronizationManager {
 
 	/**
 	 * Activate transaction synchronization for the current thread.
-	 * Called by a transaction manager on transaction begin.
+	 * Called by a transaction manager on transaction begin. <p/>
+	 * 激活事务同步器（已经激活的会抛异常）
 	 * @throws IllegalStateException if synchronization is already active
 	 */
 	public static void initSynchronization() throws IllegalStateException {

@@ -67,7 +67,8 @@ public abstract class DataSourceUtils {
 	 * <p>Is aware of a corresponding Connection bound to the current thread, for example
 	 * when using {@link DataSourceTransactionManager}. Will bind a Connection to the
 	 * thread if transaction synchronization is active, e.g. when running within a
-	 * {@link org.springframework.transaction.jta.JtaTransactionManager JTA} transaction).
+	 * {@link org.springframework.transaction.jta.JtaTransactionManager JTA} transaction). <p/>
+	 * 从指定的DataSource中获取当前事务的Connection
 	 * @param dataSource the DataSource to obtain Connections from
 	 * @return a JDBC Connection from the given DataSource
 	 * @throws org.springframework.jdbc.CannotGetJdbcConnectionException
@@ -249,7 +250,8 @@ public abstract class DataSourceUtils {
 
 	/**
 	 * Determine whether the given JDBC Connection is transactional, that is,
-	 * bound to the current thread by Spring's transaction facilities.
+	 * bound to the current thread by Spring's transaction facilities. <p/>
+	 * 判断指定的Connection是不是事务Connection（就是通过TransactionSynchronizationManager查的）
 	 * @param con the Connection to check
 	 * @param dataSource the DataSource that the Connection was obtained from
 	 * (may be {@code null})

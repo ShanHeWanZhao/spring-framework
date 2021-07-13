@@ -137,6 +137,9 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 	public static final String INFER_METHOD = "(inferred)";
 
 
+	/**
+	 * 可能是String类型，也可能直接是class类型
+	 */
 	@Nullable
 	private volatile Object beanClass;
 
@@ -167,9 +170,15 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 
 	private boolean lenientConstructorResolution = true;
 
+	/**
+	 * 使用工厂方法实例化该bean的工厂beanName
+	 */
 	@Nullable
 	private String factoryBeanName;
 
+	/**
+	 * 实例化bean的工厂方法，不为null时就会用FactoryBean实例化该bean
+	 */
 	@Nullable
 	private String factoryMethodName;
 
@@ -565,7 +574,7 @@ public abstract class AbstractBeanDefinition extends BeanMetadataAttributeAccess
 			// If it has a no-arg constructor it's deemed to be setter autowiring,
 			// otherwise we'll try constructor autowiring.
 			Constructor<?>[] constructors = getBeanClass().getConstructors();
-			for (Constructor<?> constructor : constructors) {
+			for (Constructor<?> constructor : constructors) { // 无参构造器，set方法byType注入
 				if (constructor.getParameterCount() == 0) {
 					return AUTOWIRE_BY_TYPE;
 				}

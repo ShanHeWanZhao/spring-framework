@@ -295,7 +295,10 @@ public @interface Bean {
 	 * {@link java.io.Closeable}/{@link java.lang.AutoCloseable} declared close methods.
 	 * <p>Note: Only invoked on beans whose lifecycle is under the full control of the
 	 * factory, which is always the case for singletons but not guaranteed for any
-	 * other scope.
+	 * other scope. <p/>
+	 * 默认的 (inferred) 将会自动把bean的close()或shutdown()方法作为该bean的destroy方法 <p/>
+	 * close()方法优先级比shutdown()方法优先级高 <p/>
+	 * 具体的解析地点在：AbstractBeanFactory#registerDisposableBeanIfNecessary和DisposableBeanAdapter对象构造方法里
 	 * @see org.springframework.beans.factory.DisposableBean
 	 * @see org.springframework.context.ConfigurableApplicationContext#close()
 	 */

@@ -52,7 +52,8 @@ import org.springframework.util.StringUtils;
  * <pre class="code">example.MyService=example.MyServiceImpl1,example.MyServiceImpl2</pre>
  *
  * where {@code example.MyService} is the name of the interface, and {@code MyServiceImpl1}
- * and {@code MyServiceImpl2} are two implementations.
+ * and {@code MyServiceImpl2} are two implementations. <><p/>
+ * 专门用来加载classpath路径下的所有META-INF/spring.factories文件里的信息并实例化对应的对象
  *
  * @author Arjen Poutsma
  * @author Juergen Hoeller
@@ -70,6 +71,10 @@ public final class SpringFactoriesLoader {
 
 	private static final Log logger = LogFactory.getLog(SpringFactoriesLoader.class);
 
+	/**
+	 * 缓存所有的spring.factories里的配置 <p/>
+	 * key为加载资源的类加载器，value为一个多值map，保存了class name和对应的所有配置类信息。
+	 */
 	private static final Map<ClassLoader, MultiValueMap<String, String>> cache = new ConcurrentReferenceHashMap<>();
 
 

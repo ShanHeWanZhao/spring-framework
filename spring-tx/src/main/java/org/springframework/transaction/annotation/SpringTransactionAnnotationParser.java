@@ -31,7 +31,8 @@ import org.springframework.transaction.interceptor.RuleBasedTransactionAttribute
 import org.springframework.transaction.interceptor.TransactionAttribute;
 
 /**
- * Strategy implementation for parsing Spring's {@link Transactional} annotation.
+ * Strategy implementation for parsing Spring's {@link Transactional} annotation.<p/>
+ * org.springframework.transaction.annotation.Transactional注解解析器
  *
  * @author Juergen Hoeller
  * @since 2.5

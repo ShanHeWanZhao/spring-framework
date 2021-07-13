@@ -47,6 +47,9 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	@Nullable
 	private volatile List<String> aspectBeanNames;
 
+	/**
+	 * 存放beanName和其注解相关的Advisor信息
+	 */
 	private final Map<String, List<Advisor>> advisorsCache = new ConcurrentHashMap<>();
 
 	private final Map<String, MetadataAwareAspectInstanceFactory> aspectFactoryCache = new ConcurrentHashMap<>();
@@ -89,6 +92,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 				if (aspectNames == null) {
 					List<Advisor> advisors = new ArrayList<>();
 					aspectNames = new ArrayList<>();
+					// 获取所有beanName
 					String[] beanNames = BeanFactoryUtils.beanNamesForTypeIncludingAncestors(
 							this.beanFactory, Object.class, true, false);
 					for (String beanName : beanNames) {
@@ -101,12 +105,14 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (beanType == null) {
 							continue;
 						}
+						// 存在 org.aspectj.lang.annotation.Aspect 注解
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
+								// 解析标记 AspectJ 注解中的增强方法
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
 								if (this.beanFactory.isSingleton(beanName)) {
 									this.advisorsCache.put(beanName, classAdvisors);

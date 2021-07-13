@@ -289,7 +289,8 @@ public class Enhancer extends AbstractClassGenerator {
 	 * Set the {@link CallbackFilter} used to map the generated class' methods
 	 * to a particular callback index.
 	 * New object instances will always use the same mapping, but may use different
-	 * actual callback objects.
+	 * actual callback objects.<><p/>
+	 * 设置方法的拦截器
 	 * @param filter the callback filter to use when generating a new class
 	 * @see #setCallbacks
 	 */

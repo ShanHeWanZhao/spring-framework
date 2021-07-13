@@ -164,7 +164,8 @@ public abstract class AbstractApplicationEventMulticaster
 	 * Return a Collection of ApplicationListeners matching the given
 	 * event type. Non-matching listeners get excluded early.
 	 * @param event the event to be propagated. Allows for excluding
-	 * non-matching listeners early, based on cached matching information.
+	 * non-matching listeners early, based on cached matching information. <p/>
+	 *  根据指定的event类型，返回匹配的ApplicationListener，不匹配的不会返回
 	 * @param eventType the event type
 	 * @return a Collection of ApplicationListeners
 	 * @see org.springframework.context.ApplicationListener
@@ -174,6 +175,7 @@ public abstract class AbstractApplicationEventMulticaster
 
 		Object source = event.getSource();
 		Class<?> sourceType = (source != null ? source.getClass() : null);
+		// 缓存
 		ListenerCacheKey cacheKey = new ListenerCacheKey(eventType, sourceType);
 
 		// Quick check for existing entry on ConcurrentHashMap...

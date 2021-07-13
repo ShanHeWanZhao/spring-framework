@@ -47,7 +47,8 @@ public interface BeanPostProcessor {
 	 * initialization callbacks (like InitializingBean's {@code afterPropertiesSet}
 	 * or a custom init-method). The bean will already be populated with property values.
 	 * The returned bean instance may be a wrapper around the original.
-	 * <p>The default implementation returns the given {@code bean} as-is.
+	 * <p>The default implementation returns the given {@code bean} as-is. </>
+	 * bean注册的生命周期方法,在bean的初始化方法调用之前调用
 	 * @param bean the new bean instance
 	 * @param beanName the name of the bean
 	 * @return the bean instance to use, either the original or a wrapped one;
@@ -72,7 +73,8 @@ public interface BeanPostProcessor {
 	 * <p>This callback will also be invoked after a short-circuiting triggered by a
 	 * {@link InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation} method,
 	 * in contrast to all other BeanPostProcessor callbacks.
-	 * <p>The default implementation returns the given {@code bean} as-is.
+	 * <p>The default implementation returns the given {@code bean} as-is. <p/>
+	 * bean注册的生命周期方法,在bean的初始化方法调用之后调用
 	 * @param bean the new bean instance
 	 * @param beanName the name of the bean
 	 * @return the bean instance to use, either the original or a wrapped one;

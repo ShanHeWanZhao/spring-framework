@@ -52,7 +52,8 @@ public interface AnnotatedTypeMetadata {
 	/**
 	 * Retrieve the attributes of the annotation of the given type, if any (i.e. if
 	 * defined on the underlying element, as direct annotation or meta-annotation),
-	 * also taking attribute overrides on composed annotations into account.
+	 * also taking attribute overrides on composed annotations into account. <p/>
+	 * 获取指定注解名的合并后的属性值（一个注解可能被定义再某个类的多个元注解上，就可能存在多个属性值，这里会合并，只返回一个）
 	 * @param annotationName the fully qualified class name of the annotation
 	 * type to look for
 	 * @return a Map of attributes, with the attribute name as key (e.g. "value")
@@ -83,7 +84,8 @@ public interface AnnotatedTypeMetadata {
 	 * defined on the underlying element, as direct annotation or meta-annotation).
 	 * Note that this variant does <i>not</i> take attribute overrides into account.
 	 * @param annotationName the fully qualified class name of the annotation
-	 * type to look for
+	 * type to look for <p/>
+	 * 获取指定注解名的所有的属性值，不会合并
 	 * @return a MultiMap of attributes, with the attribute name as key (e.g. "value")
 	 * and a list of the defined attribute values as Map value. This return value will
 	 * be {@code null} if no matching annotation is defined.

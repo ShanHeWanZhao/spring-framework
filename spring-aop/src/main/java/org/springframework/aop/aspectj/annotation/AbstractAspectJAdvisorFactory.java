@@ -185,8 +185,14 @@ public abstract class AbstractAspectJAdvisorFactory implements AspectJAdvisorFac
 
 		private final AspectJAnnotationType annotationType;
 
+		/**
+		 * 切点表达式，优先取pointcut值，没有再取value值
+		 */
 		private final String pointcutExpression;
 
+		/**
+		 * argNames值
+		 */
 		private final String argumentNames;
 
 		public AspectJAnnotation(A annotation) {

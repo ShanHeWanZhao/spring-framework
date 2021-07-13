@@ -99,6 +99,7 @@ public final class BridgeMethodResolver {
 	 * checks and can be used quickly filter for a set of possible matches.
 	 */
 	private static boolean isBridgedCandidateFor(Method candidateMethod, Method bridgeMethod) {
+		// true: 非桥接方法 + 目标方法和桥接方法不相等 + 方法名相同 + 参数个数相同
 		return (!candidateMethod.isBridge() && !candidateMethod.equals(bridgeMethod) &&
 				candidateMethod.getName().equals(bridgeMethod.getName()) &&
 				candidateMethod.getParameterCount() == bridgeMethod.getParameterCount());

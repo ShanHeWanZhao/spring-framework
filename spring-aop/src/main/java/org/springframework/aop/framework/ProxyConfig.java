@@ -95,6 +95,8 @@ public class ProxyConfig implements Serializable {
 	 * from being cast to {@link Advised} to query proxy status.
 	 * <p>Default is "false", meaning that any AOP proxy can be cast to
 	 * {@link Advised}.
+	 * <p/>
+	 * false：则任何代理类都将实现Advised接口
 	 */
 	public void setOpaque(boolean opaque) {
 		this.opaque = opaque;

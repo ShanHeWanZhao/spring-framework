@@ -157,7 +157,8 @@ public abstract class AnnotationUtils {
 	 * thereof.
 	 * <p>Note that this method supports only a single level of meta-annotations.
 	 * For support for arbitrary levels of meta-annotations, use one of the
-	 * {@code find*()} methods instead.
+	 * {@code find*()} methods instead.<p/>
+	 * 只会查找当前注解上是否存在指定注解，不会递归查找元注解
 	 * @param annotation the Annotation to check
 	 * @param annotationType the annotation type to look for, both locally and as a meta-annotation
 	 * @return the first matching annotation, or {@code null} if not found
@@ -186,7 +187,8 @@ public abstract class AnnotationUtils {
 	 * <em>meta-present</em> on the {@code AnnotatedElement}.
 	 * <p>Note that this method supports only a single level of meta-annotations.
 	 * For support for arbitrary levels of meta-annotations, use
-	 * {@link #findAnnotation(AnnotatedElement, Class)} instead.
+	 * {@link #findAnnotation(AnnotatedElement, Class)} instead. <p/>
+	 * 只会查找当前类上的注解和类上注解中的元注解中是否存指定注解，不会递归查找多层元注解
 	 * @param annotatedElement the {@code AnnotatedElement} from which to get the annotation
 	 * @param annotationType the annotation type to look for, both locally and as a meta-annotation
 	 * @return the first matching annotation, or {@code null} if not found
@@ -2128,6 +2130,9 @@ public abstract class AnnotationUtils {
 
 		private final String aliasedAttributeName;
 
+		/**
+		 * true: 代表当前别名就是再当前注解中
+		 */
 		private final boolean isAliasPair;
 
 		/**
@@ -2153,6 +2158,7 @@ public abstract class AnnotationUtils {
 			}
 
 			descriptor = new AliasDescriptor(attribute, aliasFor);
+			// 对@AliasFor的必要校验
 			descriptor.validate();
 			aliasDescriptorCache.put(attribute, descriptor);
 			return descriptor;
@@ -2165,10 +2171,12 @@ public abstract class AnnotationUtils {
 			this.sourceAttribute = sourceAttribute;
 			this.sourceAnnotationType = (Class<? extends Annotation>) declaringClass;
 			this.sourceAttributeName = sourceAttribute.getName();
-
+			// 别名的注解类型（默认为当前注解）
 			this.aliasedAnnotationType = (Annotation.class == aliasFor.annotation() ?
 					this.sourceAnnotationType : aliasFor.annotation());
+			// 别名的属性名（不允许@AliasFor的value和attribute同时存在）
 			this.aliasedAttributeName = getAliasedAttributeName(aliasFor, sourceAttribute);
+			// 校验别名是不是当前属性名（如果是那还用个锤子的@AliasFor，有毛病，直接抛异常）
 			if (this.aliasedAnnotationType == this.sourceAnnotationType &&
 					this.aliasedAttributeName.equals(this.sourceAttributeName)) {
 				String msg = String.format("@AliasFor declaration on attribute '%s' in annotation [%s] points to " +
@@ -2176,6 +2184,7 @@ public abstract class AnnotationUtils {
 						sourceAttribute.getName(), declaringClass.getName());
 				throw new AnnotationConfigurationException(msg);
 			}
+			// 校验别名是否再目标注解上真实存在（不存在的直接抛异常）
 			try {
 				this.aliasedAttribute = this.aliasedAnnotationType.getDeclaredMethod(this.aliasedAttributeName);
 			}
@@ -2200,14 +2209,15 @@ public abstract class AnnotationUtils {
 				throw new AnnotationConfigurationException(msg);
 			}
 
-			if (this.isAliasPair) {
+			if (this.isAliasPair) { // 名对是在当前注解中
+				// 别名对的@AliasFor注解都不能为空
 				AliasFor mirrorAliasFor = this.aliasedAttribute.getAnnotation(AliasFor.class);
 				if (mirrorAliasFor == null) {
 					String msg = String.format("Attribute '%s' in annotation [%s] must be declared as an @AliasFor [%s].",
 							this.aliasedAttributeName, this.sourceAnnotationType.getName(), this.sourceAttributeName);
 					throw new AnnotationConfigurationException(msg);
 				}
-
+				// 别名对的@AliasFor必须互为镜像
 				String mirrorAliasedAttributeName = getAliasedAttributeName(mirrorAliasFor, this.aliasedAttribute);
 				if (!this.sourceAttributeName.equals(mirrorAliasedAttributeName)) {
 					String msg = String.format("Attribute '%s' in annotation [%s] must be declared as an @AliasFor [%s], not [%s].",
@@ -2237,6 +2247,12 @@ public abstract class AnnotationUtils {
 			Object defaultValue = this.sourceAttribute.getDefaultValue();
 			Object aliasedDefaultValue = aliasedAttribute.getDefaultValue();
 
+			// 当前注解中的别名对必须都有默认值
+			/*
+			 * 	为什么这么做呢？
+			 * 别名存在的意义就是用一个简单的属性名（比如可省略的value）代替复杂的属性名
+			 * 要是都没默认值，就都成了必填项，别名还有意义嘛？？
+			 */
 			if (defaultValue == null || aliasedDefaultValue == null) {
 				String msg = String.format("Misconfigured aliases: attribute '%s' in annotation [%s] " +
 						"and attribute '%s' in annotation [%s] must declare default values.",
@@ -2244,7 +2260,7 @@ public abstract class AnnotationUtils {
 						aliasedAttribute.getDeclaringClass().getName());
 				throw new AnnotationConfigurationException(msg);
 			}
-
+			// 当前注解中的别名对默认值必须相等（要是不相等且又没设置值，那我该取那个默认值呢？？）
 			if (!ObjectUtils.nullSafeEquals(defaultValue, aliasedDefaultValue)) {
 				String msg = String.format("Misconfigured aliases: attribute '%s' in annotation [%s] " +
 						"and attribute '%s' in annotation [%s] must declare the same default value.",
@@ -2369,7 +2385,7 @@ public abstract class AnnotationUtils {
 			boolean valueDeclared = StringUtils.hasText(value);
 
 			// Ensure user did not declare both 'value' and 'attribute' in @AliasFor
-			if (attributeDeclared && valueDeclared) {
+			if (attributeDeclared && valueDeclared) { // value和attribute都存在就直接抛异常
 				String msg = String.format("In @AliasFor declared on attribute '%s' in annotation [%s], attribute 'attribute' " +
 						"and its alias 'value' are present with values of [%s] and [%s], but only one is permitted.",
 						attribute.getName(), attribute.getDeclaringClass().getName(), attributeName, value);

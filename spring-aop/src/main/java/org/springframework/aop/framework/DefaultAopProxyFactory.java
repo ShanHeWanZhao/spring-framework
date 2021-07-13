@@ -59,6 +59,7 @@ public class DefaultAopProxyFactory implements AopProxyFactory, Serializable {
 			}
 			return new ObjenesisCglibAopProxy(config);
 		}
+		// 未优化（optimize默认false），未使用直接目标代理类（proxyTargetClass默认false），且目标类接口不止一个SpringProxy接口
 		else {
 			return new JdkDynamicAopProxy(config);
 		}

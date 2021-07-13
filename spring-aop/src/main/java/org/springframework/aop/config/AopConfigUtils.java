@@ -58,8 +58,11 @@ public abstract class AopConfigUtils {
 
 	static {
 		// Set up the escalation list...
+		// 1级，最低
 		APC_PRIORITY_LIST.add(InfrastructureAdvisorAutoProxyCreator.class);
+		// 2级，中等
 		APC_PRIORITY_LIST.add(AspectJAwareAdvisorAutoProxyCreator.class);
+		// 3级，最高优先级
 		APC_PRIORITY_LIST.add(AnnotationAwareAspectJAutoProxyCreator.class);
 	}
 
@@ -120,6 +123,7 @@ public abstract class AopConfigUtils {
 
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 
+		// 如果已经存在目标BeanDefinition，则判断优先级，来决定是否覆盖
 		if (registry.containsBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME)) {
 			BeanDefinition apcDefinition = registry.getBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME);
 			if (!cls.getName().equals(apcDefinition.getBeanClassName())) {
@@ -134,6 +138,7 @@ public abstract class AopConfigUtils {
 
 		RootBeanDefinition beanDefinition = new RootBeanDefinition(cls);
 		beanDefinition.setSource(source);
+		// 设置这个AnnotationAwareAspectJAutoProxyCreator的bean的order为最高优先级
 		beanDefinition.getPropertyValues().add("order", Ordered.HIGHEST_PRECEDENCE);
 		beanDefinition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
 		registry.registerBeanDefinition(AUTO_PROXY_CREATOR_BEAN_NAME, beanDefinition);

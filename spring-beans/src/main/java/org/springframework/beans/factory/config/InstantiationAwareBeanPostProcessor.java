@@ -86,7 +86,8 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @return {@code true} if properties should be set on the bean; {@code false}
 	 * if property population should be skipped. Normal implementations should return {@code true}.
 	 * Returning {@code false} will also prevent any subsequent InstantiationAwareBeanPostProcessor
-	 * instances being invoked on this bean instance.
+	 * instances being invoked on this bean instance. <p/>
+	 * bean已被实例化，但在属性填充之前调用。返回true代表继续，返回false则代表不会进行属性填充
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see #postProcessBeforeInstantiation
 	 */

@@ -210,6 +210,11 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 	}
 
 
+	/**
+	 * 解析BeanFactory中除自己的所有BeanDefinition中的占位符
+	 * @param beanFactoryToProcess
+	 * @param valueResolver
+	 */
 	protected void doProcessProperties(ConfigurableListableBeanFactory beanFactoryToProcess,
 			StringValueResolver valueResolver) {
 
@@ -222,6 +227,7 @@ public abstract class PlaceholderConfigurerSupport extends PropertyResourceConfi
 			if (!(curName.equals(this.beanName) && beanFactoryToProcess.equals(this.beanFactory))) {
 				BeanDefinition bd = beanFactoryToProcess.getBeanDefinition(curName);
 				try {
+					// 解析BeanDefinition中的占位符
 					visitor.visitBeanDefinition(bd);
 				}
 				catch (Exception ex) {

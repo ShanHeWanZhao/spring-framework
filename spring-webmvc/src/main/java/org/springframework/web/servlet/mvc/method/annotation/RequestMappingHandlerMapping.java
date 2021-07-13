@@ -220,6 +220,7 @@ public class RequestMappingHandlerMapping extends RequestMappingInfoHandlerMappi
 	protected RequestMappingInfo getMappingForMethod(Method method, Class<?> handlerType) {
 		RequestMappingInfo info = createRequestMappingInfo(method);
 		if (info != null) {
+			// 判断类上注解，并和方法上的注解组合
 			RequestMappingInfo typeInfo = createRequestMappingInfo(handlerType);
 			if (typeInfo != null) {
 				info = typeInfo.combine(info);

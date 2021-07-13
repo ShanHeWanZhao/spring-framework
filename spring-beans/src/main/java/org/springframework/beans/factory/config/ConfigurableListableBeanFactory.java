@@ -137,7 +137,8 @@ public interface ConfigurableListableBeanFactory
 	/**
 	 * Freeze all bean definitions, signalling that the registered bean definitions
 	 * will not be modified or post-processed any further.
-	 * <p>This allows the factory to aggressively cache bean definition metadata.
+	 * <p>This allows the factory to aggressively cache bean definition metadata. <><p/>
+	 * 此操作后将不能在修改任何bean definition，所以工厂可以缓存bean的信息了
 	 */
 	void freezeConfiguration();
 
@@ -153,7 +154,8 @@ public interface ConfigurableListableBeanFactory
 	 * {@link org.springframework.beans.factory.FactoryBean FactoryBeans}.
 	 * Typically invoked at the end of factory setup, if desired.
 	 * @throws BeansException if one of the singleton beans could not be created.
-	 * Note: This may have left the factory with some beans already initialized!
+	 * Note: This may have left the factory with some beans already initialized! <p/>
+	 * 初始化所有的单例非lazy的bean，且bean是非抽象的
 	 * Call {@link #destroySingletons()} for full cleanup in this case.
 	 * @see #destroySingletons()
 	 */

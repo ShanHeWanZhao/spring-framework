@@ -166,7 +166,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			Assert.state(rootClass != null, "Target class must be available for creating a CGLIB proxy");
 
 			Class<?> proxySuperClass = rootClass;
-			if (ClassUtils.isCglibProxyClass(rootClass)) {
+			if (ClassUtils.isCglibProxyClass(rootClass)) { // 已经是个cglib代理类了，就需要把真正被代理类的class和接口找出来
 				proxySuperClass = rootClass.getSuperclass();
 				Class<?>[] additionalInterfaces = rootClass.getInterfaces();
 				for (Class<?> additionalInterface : additionalInterfaces) {
@@ -175,6 +175,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			}
 
 			// Validate the class, writing log messages as necessary.
+			// 验证class的final相关方法并写日志
 			validateClassIfNecessary(proxySuperClass, classLoader);
 
 			// Configure CGLIB Enhancer...
@@ -191,6 +192,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
 			enhancer.setStrategy(new ClassLoaderAwareUndeclaredThrowableStrategy(classLoader));
 
+			// 设置拦截器
 			Callback[] callbacks = getCallbacks(rootClass);
 			Class<?>[] types = new Class<?>[callbacks.length];
 			for (int x = 0; x < types.length; x++) {
@@ -287,6 +289,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 		boolean isStatic = this.advised.getTargetSource().isStatic();
 
 		// Choose an "aop" interceptor (used for AOP calls).
+		// 封装拦截器为DynamicAdvisedInterceptor（各种切面）
 		Callback aopInterceptor = new DynamicAdvisedInterceptor(this.advised);
 
 		// Choose a "straight to target" interceptor. (used for calls that are
@@ -664,6 +667,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			Object oldProxy = null;
 			boolean setProxyContext = false;
 			Object target = null;
+			// 先准备目标对象源（这个对象就是为了延迟初始化而存在的）
 			TargetSource targetSource = this.advised.getTargetSource();
 			try {
 				if (this.advised.exposeProxy) {
@@ -672,12 +676,15 @@ class CglibAopProxy implements AopProxy, Serializable {
 					setProxyContext = true;
 				}
 				// Get as late as possible to minimize the time we "own" the target, in case it comes from a pool...
+				// 获取真实的，不是代理的目标对象
+				// 例：Session域从SimpleBeanTargetSource中获取，再转到BeanFactory，再转到SessionScope中，获取目标对象
 				target = targetSource.getTarget();
 				Class<?> targetClass = (target != null ? target.getClass() : null);
 				List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 				Object retVal;
 				// Check whether we only have one InvokerInterceptor: that is,
 				// no real advice, but just reflective invocation of the target.
+				// 无切面，且方法为public，直接调用原方法
 				if (chain.isEmpty() && Modifier.isPublic(method.getModifiers())) {
 					// We can skip creating a MethodInvocation: just invoke the target directly.
 					// Note that the final invoker must be an InvokerInterceptor, so we know

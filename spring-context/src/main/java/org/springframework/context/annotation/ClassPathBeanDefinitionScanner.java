@@ -280,11 +280,14 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				if (candidate instanceof AbstractBeanDefinition) {
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
+				// 如果是注解定义的Bean，则继续解析其他相关注解配置BeanDefinition
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
+				// 再次检查BeanDefinition，校验是否重复冲突
 				if (checkCandidate(beanName, candidate)) {
 					BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(candidate, beanName);
+					// 配置BeanDefinition是否是代理
 					definitionHolder =
 							AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 					beanDefinitions.add(definitionHolder);

@@ -197,7 +197,8 @@ abstract public class AbstractClassGenerator<T> implements ClassGenerator {
 	// SPRING PATCH END
 
 	/**
-	 * Override the default naming policy.
+	 * Override the default naming policy. <p/>
+	 * 设置被增强的类的命名策略
 	 * @param namingPolicy the custom policy, or null to use the default
 	 * @see DefaultNamingPolicy
 	 */

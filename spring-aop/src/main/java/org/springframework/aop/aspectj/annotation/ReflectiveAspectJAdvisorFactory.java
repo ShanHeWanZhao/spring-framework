@@ -121,6 +121,7 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 				new LazySingletonAspectInstanceFactoryDecorator(aspectInstanceFactory);
 
 		List<Advisor> advisors = new ArrayList<>();
+		// 声明为 Pointcut 的方法不处理
 		for (Method method : getAdvisorMethods(aspectClass)) {
 			Advisor advisor = getAdvisor(method, lazySingletonAspectInstanceFactory, advisors.size(), aspectName);
 			if (advisor != null) {
@@ -145,6 +146,11 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		return advisors;
 	}
 
+	/**
+	 * 获取不包含 Pointcut注解的所有方法并排序
+	 * @param aspectClass
+	 * @return
+	 */
 	private List<Method> getAdvisorMethods(Class<?> aspectClass) {
 		final List<Method> methods = new ArrayList<>();
 		ReflectionUtils.doWithMethods(aspectClass, method -> {
@@ -247,6 +253,7 @@ public class ReflectiveAspectJAdvisorFactory extends AbstractAspectJAdvisorFacto
 		AbstractAspectJAdvice springAdvice;
 
 		switch (aspectJAnnotation.getAnnotationType()) {
+			// pointCut直接返回null
 			case AtPointcut:
 				if (logger.isDebugEnabled()) {
 					logger.debug("Processing pointcut '" + candidateAdviceMethod.getName() + "'");

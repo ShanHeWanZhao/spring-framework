@@ -339,6 +339,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 */
 	@Override
 	public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException {
+		// 第一次获取时，里面的ConnectionHolder为null
 		Object transaction = doGetTransaction();
 
 		// Cache debug flag to avoid repeated checks.
@@ -348,9 +349,10 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			// Use defaults if no transaction definition given.
 			definition = new DefaultTransactionDefinition();
 		}
-
+		// 判断当前线程是否存在事务，依据为当前线程记录的ConnectionHolder不为空且transactionActive属性为true
 		if (isExistingTransaction(transaction)) {
 			// Existing transaction found -> check propagation behavior to find out how to behave.
+			// 处理当前线程已存在事务的情况
 			return handleExistingTransaction(definition, transaction, debugEnabled);
 		}
 
@@ -360,22 +362,37 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		}
 
 		// No existing transaction found -> check propagation behavior to find out how to proceed.
+		/*
+			到这一步，说明当前线程才准备创建事务，如果传播策略为PROPAGATION_MANDATORY，则直接抛出异常
+		说明PROPAGATION_MANDATORY策略只支持已存在的事务，不存在则直接抛异常
+		 */
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_MANDATORY) {
 			throw new IllegalTransactionStateException(
 					"No existing transaction found for transaction marked with propagation 'mandatory'");
 		}
+		/*
+			PROPAGATION_REQUIRED、PROPAGATION_REQUIRES_NEW、PROPAGATION_NESTED
+			都需要新建事务
+		 */
 		else if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
 				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
 				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
+			// 空暂停
 			SuspendedResourcesHolder suspendedResources = suspend(null);
 			if (debugEnabled) {
 				logger.debug("Creating new transaction with name [" + definition.getName() + "]: " + definition);
 			}
 			try {
+				// 默认true
 				boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
 				DefaultTransactionStatus status = newTransactionStatus(
 						definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
+				/*
+					构造transaction，包括设置ConnectionHolder、隔离级别、timeout
+					如果是新连接，则绑定到当前线程
+				 */
 				doBegin(transaction, definition);
+				// 新同步事务的设置，针对于当前线程的设置
 				prepareSynchronization(status, definition);
 				return status;
 			}
@@ -384,6 +401,9 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				throw ex;
 			}
 		}
+		/*
+		PROPAGATION_SUPPORTS、PROPAGATION_NOT_SUPPORTED、PROPAGATION_NEVER都不支持新建事务
+		 */
 		else {
 			// Create "empty" transaction: no actual transaction, but potentially synchronization.
 			if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
@@ -402,11 +422,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			TransactionDefinition definition, Object transaction, boolean debugEnabled)
 			throws TransactionException {
 
+		// PROPAGATION_NEVER表示不支持任何存在的事务，直接抛异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
 			throw new IllegalTransactionStateException(
 					"Existing transaction found for transaction marked with propagation 'never'");
 		}
 
+		// PROPAGATION_NOT_SUPPORTED则会暂停当前事务
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction");
@@ -417,11 +439,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 					definition, null, false, newSynchronization, debugEnabled, suspendedResources);
 		}
 
+		// PROPAGATION_REQUIRES_NEW，暂停当前事务，新开一个事务
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
 						definition.getName() + "]");
 			}
+			// 暂停当前事务，方便之后还原
 			SuspendedResourcesHolder suspendedResources = suspend(transaction);
 			try {
 				boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
@@ -437,6 +461,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 
+		// PROPAGATION_NESTED，先判断是否允许嵌套事务
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
 			if (!isNestedTransactionAllowed()) {
 				throw new NestedTransactionNotSupportedException(

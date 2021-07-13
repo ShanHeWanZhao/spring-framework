@@ -137,11 +137,14 @@ class ConfigurationClassBeanDefinitionReader {
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
+		// 加载@Bean注解方法的BeanDefinition，并设置使用工厂方法构造
 		for (BeanMethod beanMethod : configClass.getBeanMethods()) {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// @ImportResource注解的结果注册bean
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+		// @Import注解的结果注册bean
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 
@@ -178,6 +181,7 @@ class ConfigurationClassBeanDefinitionReader {
 		String methodName = metadata.getMethodName();
 
 		// Do we need to mark the bean as skipped by its condition?
+		// @Conditional注解判断是否该跳过
 		if (this.conditionEvaluator.shouldSkip(metadata, ConfigurationPhase.REGISTER_BEAN)) {
 			configClass.skippedBeanMethods.add(methodName);
 			return;
@@ -211,12 +215,13 @@ class ConfigurationClassBeanDefinitionReader {
 		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata);
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
-		if (metadata.isStatic()) {
+		// 使用工厂模式实例化bean
+		if (metadata.isStatic()) { // 静态方法直接使用class对象调用
 			// static @Bean method
 			beanDef.setBeanClassName(configClass.getMetadata().getClassName());
 			beanDef.setFactoryMethodName(methodName);
 		}
-		else {
+		else { // 实例方法要使用FactoryBean对象调用
 			// instance @Bean method
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
@@ -225,6 +230,7 @@ class ConfigurationClassBeanDefinitionReader {
 		beanDef.setAttribute(org.springframework.beans.factory.annotation.RequiredAnnotationBeanPostProcessor.
 				SKIP_REQUIRED_CHECK_ATTRIBUTE, Boolean.TRUE);
 
+		// @Bean方法上的常用注解解析@Lazy等等
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(beanDef, metadata);
 
 		Autowire autowire = bean.getEnum("autowire");
@@ -251,6 +257,7 @@ class ConfigurationClassBeanDefinitionReader {
 		if (attributes != null) {
 			beanDef.setScope(attributes.getString("value"));
 			proxyMode = attributes.getEnum("proxyMode");
+			// 默认就为No
 			if (proxyMode == ScopedProxyMode.DEFAULT) {
 				proxyMode = ScopedProxyMode.NO;
 			}

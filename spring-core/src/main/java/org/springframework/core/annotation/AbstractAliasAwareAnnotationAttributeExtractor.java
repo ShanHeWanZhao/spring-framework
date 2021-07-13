@@ -88,14 +88,17 @@ abstract class AbstractAliasAwareAnnotationAttributeExtractor<S> implements Anno
 	@Nullable
 	public final Object getAttributeValue(Method attributeMethod) {
 		String attributeName = attributeMethod.getName();
+		// 原始注解属性值
 		Object attributeValue = getRawAttributeValue(attributeMethod);
 
 		List<String> aliasNames = this.attributeAliasMap.get(attributeName);
 		if (aliasNames != null) {
+			// 默认的注解属性值
 			Object defaultValue = AnnotationUtils.getDefaultValue(this.annotationType, attributeName);
 			for (String aliasName : aliasNames) {
+				// 别名的注解属性值
 				Object aliasValue = getRawAttributeValue(aliasName);
-
+				// 如果 原始注解属性值 和 别名的注解属性值 都存在，且都不是默认值。说明有歧义，就直接抛异常
 				if (!ObjectUtils.nullSafeEquals(attributeValue, aliasValue) &&
 						!ObjectUtils.nullSafeEquals(attributeValue, defaultValue) &&
 						!ObjectUtils.nullSafeEquals(aliasValue, defaultValue)) {

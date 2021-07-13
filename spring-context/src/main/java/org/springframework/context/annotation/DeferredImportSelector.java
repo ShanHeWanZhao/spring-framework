@@ -29,7 +29,8 @@ import org.springframework.lang.Nullable;
  * indicate a precedence against other {@link DeferredImportSelector DeferredImportSelectors}.
  *
  * <p>Implementations may also provide an {@link #getImportGroup() import group} which
- * can provide additional sorting and filtering logic across different selectors.
+ * can provide additional sorting and filtering logic across different selectors. <p/>
+ * 延期处理的ImportSelector接口，实现这个接口的selectImports方法会再ConfigurationClassParser类中最后才处理（等其他的处理完毕才处理）
  *
  * @author Phillip Webb
  * @author Stephane Nicoll

@@ -48,6 +48,9 @@ import org.springframework.util.ErrorHandler;
  */
 public class SimpleApplicationEventMulticaster extends AbstractApplicationEventMulticaster {
 
+	/**
+	 * 默认为null
+	 */
 	@Nullable
 	private Executor taskExecutor;
 
@@ -130,6 +133,7 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
+		// 有线程池就用其他线程执行广播任务
 		Executor executor = getTaskExecutor();
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
 			if (executor != null) {

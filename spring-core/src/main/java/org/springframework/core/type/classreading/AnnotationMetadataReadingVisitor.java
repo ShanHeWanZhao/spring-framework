@@ -53,13 +53,22 @@ public class AnnotationMetadataReadingVisitor extends ClassMetadataReadingVisito
 	@Nullable
 	protected final ClassLoader classLoader;
 
+	/**
+	 * 仅当前类上的注解
+	 */
 	protected final Set<String> annotationSet = new LinkedHashSet<>(4);
 
+	/**
+	 * 当前类上注解中的注解缓存  <p/>
+	 * key: 当前类上的注解， value：这个注解里面的所有注解（继续递归的除java基础包的的所有注解）
+	 */
 	protected final Map<String, Set<String>> metaAnnotationMap = new LinkedHashMap<>(4);
 
 	/**
 	 * Declared as a {@link LinkedMultiValueMap} instead of a {@link MultiValueMap}
-	 * to ensure that the hierarchical ordering of the entries is preserved.
+	 * to ensure that the hierarchical ordering of the entries is preserved. <p/>
+	 * 多值map。key为注解className（包括递归的元注解）， value为封装的这个注解所有属性值
+	 * 因为一个注解里可能存在多个相同的元注解
 	 * @see AnnotationReadingVisitorUtils#getMergedAnnotationAttributes
 	 */
 	protected final LinkedMultiValueMap<String, AnnotationAttributes> attributesMap = new LinkedMultiValueMap<>(4);

@@ -47,7 +47,8 @@ public interface AspectJAdvisorFactory {
 	 * such as those with unsupported instantiation models.
 	 * Use the {@link #validate} method to handle these cases if necessary.
 	 * @param clazz the supposed annotation-style AspectJ class
-	 * @return whether or not this class is recognized by AspectJ as an aspect class
+	 * @return whether or not this class is recognized by AspectJ as an aspect class <><p/>
+	 * 类上面是否有Aspect注解
 	 */
 	boolean isAspect(Class<?> clazz);
 

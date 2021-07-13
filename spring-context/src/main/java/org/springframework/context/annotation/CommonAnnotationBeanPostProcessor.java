@@ -439,6 +439,9 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 	/**
 	 * Obtain a lazily resolving resource proxy for the given name and type,
 	 * delegating to {@link #getResource} on demand once a method call comes in.
+	 * <p/>
+	 * 懒加载，构建一个proxy对象，将获取target的方法封装在TargetSource对象的getTarget方法里，
+	 * 让只有在真正要获取target对象时才去初始化
 	 * @param element the descriptor for the annotated field/method
 	 * @param requestingBeanName the name of the requesting bean
 	 * @return the resource object (never {@code null})
@@ -516,6 +519,7 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 		if (factory instanceof AutowireCapableBeanFactory) {
 			AutowireCapableBeanFactory beanFactory = (AutowireCapableBeanFactory) factory;
 			DependencyDescriptor descriptor = element.getDependencyDescriptor();
+			// 支持默认类型匹配开启（默认为true），且使用默认名（字段名，@Resource注解），且不包含这个默认名的BeanDefinition。则解析type
 			if (this.fallbackToDefaultTypeMatch && element.isDefaultName && !factory.containsBean(name)) {
 				autowiredBeanNames = new LinkedHashSet<>();
 				resource = beanFactory.resolveDependency(descriptor, requestingBeanName, autowiredBeanNames, null);
@@ -595,7 +599,8 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 
 	/**
 	 * Class representing injection information about an annotated field
-	 * or setter method, supporting the @Resource annotation.
+	 * or setter method, supporting the @Resource annotation. <><p/>
+	 * javax.annotation.Resource注解注入解析器
 	 */
 	private class ResourceElement extends LookupElement {
 
@@ -623,7 +628,9 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 				// No resource type specified... check field/method.
 				resourceType = getResourceType();
 			}
+			// 默认字段名
 			this.name = (resourceName != null ? resourceName : "");
+			// 默认当前字段的Class类型
 			this.lookupType = resourceType;
 			String lookupValue = resource.lookup();
 			this.mappedName = (StringUtils.hasLength(lookupValue) ? lookupValue : resource.mappedName());

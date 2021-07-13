@@ -499,6 +499,7 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 		for (Resource rootDirResource : rootDirResources) {
 			rootDirResource = resolveRootDirResource(rootDirResource);
 			URL rootDirUrl = rootDirResource.getURL();
+			// bundle协议
 			if (equinoxResolveMethod != null && rootDirUrl.getProtocol().startsWith("bundle")) {
 				URL resolvedUrl = (URL) ReflectionUtils.invokeMethod(equinoxResolveMethod, null, rootDirUrl);
 				if (resolvedUrl != null) {
@@ -506,13 +507,15 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 				}
 				rootDirResource = new UrlResource(rootDirUrl);
 			}
+			// vfs协议
 			if (rootDirUrl.getProtocol().startsWith(ResourceUtils.URL_PROTOCOL_VFS)) {
 				result.addAll(VfsResourceMatchingDelegate.findMatchingResources(rootDirUrl, subPattern, getPathMatcher()));
 			}
+			// jar包
 			else if (ResourceUtils.isJarURL(rootDirUrl) || isJarResource(rootDirResource)) {
 				result.addAll(doFindPathMatchingJarResources(rootDirResource, rootDirUrl, subPattern));
 			}
-			else {
+			else { // 文件协议：file://
 				result.addAll(doFindPathMatchingFileResources(rootDirResource, subPattern));
 			}
 		}
@@ -742,7 +745,8 @@ public class PathMatchingResourcePatternResolver implements ResourcePatternResol
 
 	/**
 	 * Retrieve files that match the given path pattern,
-	 * checking the given directory and its subdirectories.
+	 * checking the given directory and its subdirectories. <><p/>
+	 * 递归获取这个文件夹下所有的文件，再过滤出匹配的文件
 	 * @param rootDir the directory to start from
 	 * @param pattern the pattern to match against,
 	 * relative to the root directory

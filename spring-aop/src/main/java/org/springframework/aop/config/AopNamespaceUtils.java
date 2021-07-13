@@ -74,6 +74,7 @@ public abstract class AopNamespaceUtils {
 	public static void registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 			ParserContext parserContext, Element sourceElement) {
 
+		// 注册AnnotationAwareAspectJAutoProxyCreator
 		BeanDefinition beanDefinition = AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(
 				parserContext.getRegistry(), parserContext.extractSource(sourceElement));
 		useClassProxyingIfNecessary(parserContext.getRegistry(), sourceElement);
@@ -83,11 +84,11 @@ public abstract class AopNamespaceUtils {
 	private static void useClassProxyingIfNecessary(BeanDefinitionRegistry registry, @Nullable Element sourceElement) {
 		if (sourceElement != null) {
 			boolean proxyTargetClass = Boolean.parseBoolean(sourceElement.getAttribute(PROXY_TARGET_CLASS_ATTRIBUTE));
-			if (proxyTargetClass) {
+			if (proxyTargetClass) {  // 使用cglib代理
 				AopConfigUtils.forceAutoProxyCreatorToUseClassProxying(registry);
 			}
 			boolean exposeProxy = Boolean.parseBoolean(sourceElement.getAttribute(EXPOSE_PROXY_ATTRIBUTE));
-			if (exposeProxy) {
+			if (exposeProxy) { // 暴露当前代理，用于内部切面方法使用
 				AopConfigUtils.forceAutoProxyCreatorToExposeProxy(registry);
 			}
 		}

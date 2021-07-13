@@ -73,7 +73,8 @@ abstract class ConfigurationClassUtils {
 	/**
 	 * Check whether the given bean definition is a candidate for a configuration class
 	 * (or a nested component class declared within a configuration/component class,
-	 * to be auto-registered as well), and mark it accordingly.
+	 * to be auto-registered as well), and mark it accordingly.<><p/>
+	 * 检查当前BeanDefinition是否是配置类，包括但不限于@Configuration注解，只是带有这个注解就标记为full，其余则标记为little
 	 * @param beanDef the bean definition to check
 	 * @param metadataReaderFactory the current factory in use by the caller
 	 * @return whether the candidate qualifies as (any kind of) configuration class
@@ -112,9 +113,11 @@ abstract class ConfigurationClassUtils {
 			}
 		}
 
+		// @Configuration就为full
 		if (isFullConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
 		}
+		// 如果class为接口直接返回false，其余的@Component，@ComponentScan，@Import，@ImportResource，@Bean方法注解 就为little
 		else if (isLiteConfigurationCandidate(metadata)) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}

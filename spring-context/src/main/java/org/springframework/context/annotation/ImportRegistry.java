@@ -20,13 +20,21 @@ import org.springframework.core.type.AnnotationMetadata;
 import org.springframework.lang.Nullable;
 
 /**
- * Registry of imported class {@link AnnotationMetadata}.
+ * Registry of imported class {@link AnnotationMetadata}.<p/>
+ * Import注解导入的类
  *
  * @author Juergen Hoeller
  * @author Phillip Webb
  */
 interface ImportRegistry {
 
+	/**
+	 * 获取这个导入类的注解相关信息
+	 * 重点：只取这个importClass的最后一次导入的数据<p/>
+	 * 比如@EnableAsync用了两次，但真正发挥作用的只有后解析的那个@EnableAsync注解
+	 * @param importedClass
+	 * @return
+	 */
 	@Nullable
 	AnnotationMetadata getImportingClassFor(String importedClass);
 

@@ -228,7 +228,8 @@ public class MethodProxy {
 	}
 
 	/**
-	 * Invoke the original (super) method on the specified object.
+	 * Invoke the original (super) method on the specified object.<><p/>
+	 * 调用原始方法（因为cglib是继承增强，所以方法名也叫invokeSuper）
 	 * @param obj the enhanced object, must be the object passed as the first
 	 * argument to the MethodInterceptor
 	 * @param args the arguments passed to the intercepted method; you may substitute a different

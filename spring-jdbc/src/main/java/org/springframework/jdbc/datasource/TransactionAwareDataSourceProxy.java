@@ -174,7 +174,6 @@ public class TransactionAwareDataSourceProxy extends DelegatingDataSource {
 		@Nullable
 		public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
 			// Invocation on ConnectionProxy interface coming in...
-
 			if (method.getName().equals("equals")) {
 				// Only considered as equal when proxies are identical.
 				return (proxy == args[0]);

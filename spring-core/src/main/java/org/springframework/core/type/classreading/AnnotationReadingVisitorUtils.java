@@ -132,6 +132,7 @@ abstract class AnnotationReadingVisitorUtils {
 		// To start with, we populate the result with a copy of all attribute values
 		// from the target annotation. A copy is necessary so that we do not
 		// inadvertently mutate the state of the metadata passed to this method.
+		// 第一个注解属性值（最接近原始类的）
 		AnnotationAttributes result = new AnnotationAttributes(attributesList.get(0));
 
 		Set<String> overridableAttributeNames = new HashSet<>(result.keySet());
@@ -150,9 +151,11 @@ abstract class AnnotationReadingVisitorUtils {
 			List<AnnotationAttributes> currentAttributesList = attributesMap.get(currentAnnotationType);
 			if (!ObjectUtils.isEmpty(currentAttributesList)) {
 				Set<String> metaAnns = metaAnnotationMap.get(currentAnnotationType);
+				// 非空，并且当前注解里的所有元注解包含目标注解
 				if (metaAnns != null && metaAnns.contains(annotationName)) {
 					AnnotationAttributes currentAttributes = currentAttributesList.get(0);
 					for (String overridableAttributeName : overridableAttributeNames) {
+						// 属性值覆盖
 						Object value = currentAttributes.get(overridableAttributeName);
 						if (value != null) {
 							// Store the value, potentially overriding a value from an attribute

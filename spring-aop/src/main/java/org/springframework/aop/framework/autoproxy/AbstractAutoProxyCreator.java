@@ -133,6 +133,10 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 
 	private final Set<String> targetSourcedBeans = Collections.newSetFromMap(new ConcurrentHashMap<>(16));
 
+	/**
+	 * 被早些处理的bean集和（一个bean在循环引用还没被创建完毕期间，就需要被其他地方使用，这时也应该保证返回的bean引用是真的
+	 *引用（即可能是被aop代理的bean引用））
+	 */
 	private final Map<Object, Object> earlyProxyReferences = new ConcurrentHashMap<>(16);
 
 	private final Map<Object, Class<?>> proxyTypes = new ConcurrentHashMap<>(16);
@@ -295,6 +299,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			// 判断该bean是否已被早些的引用处理过了，处理过了就不需要再处理一次了
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
@@ -332,12 +337,15 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	 * @return a proxy wrapping the bean, or the raw bean instance as-is
 	 */
 	protected Object wrapIfNecessary(Object bean, String beanName, Object cacheKey) {
+		// 已经处理过
 		if (StringUtils.hasLength(beanName) && this.targetSourcedBeans.contains(beanName)) {
 			return bean;
 		}
+		// 无需增强
 		if (Boolean.FALSE.equals(this.advisedBeans.get(cacheKey))) {
 			return bean;
 		}
+		// 是一个基础设施类或者指定的不需要代理
 		if (isInfrastructureClass(bean.getClass()) || shouldSkip(bean.getClass(), beanName)) {
 			this.advisedBeans.put(cacheKey, Boolean.FALSE);
 			return bean;

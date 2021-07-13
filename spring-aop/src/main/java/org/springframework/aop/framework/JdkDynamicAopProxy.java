@@ -173,6 +173,7 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 				// There is only getDecoratedClass() declared -> dispatch to proxy config.
 				return AopProxyUtils.ultimateTargetClass(this.advised);
 			}
+			// opaque为false，且该方法的类为实现了Advised的接口，则使用advised字段调用该方法
 			else if (!this.advised.opaque && method.getDeclaringClass().isInterface() &&
 					method.getDeclaringClass().isAssignableFrom(Advised.class)) {
 				// Service invocations on ProxyConfig with the proxy config...
@@ -193,11 +194,12 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 			Class<?> targetClass = (target != null ? target.getClass() : null);
 
 			// Get the interception chain for this method.
+			// 获取这个方法的所有拦截链
 			List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 
 			// Check whether we have any advice. If we don't, we can fallback on direct
 			// reflective invocation of the target, and avoid creating a MethodInvocation.
-			if (chain.isEmpty()) {
+			if (chain.isEmpty()) { // 拦截链为空，则直接调用原方法
 				// We can skip creating a MethodInvocation: just invoke the target directly
 				// Note that the final invoker must be an InvokerInterceptor so we know it does
 				// nothing but a reflective operation on the target, and no hot swapping or fancy proxying.
