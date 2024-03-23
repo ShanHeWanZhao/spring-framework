@@ -145,7 +145,8 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 	 * Create a new DisposableBeanAdapter for the given bean.
 	 * @param bean the bean instance (never {@code null})
 	 * @param postProcessors the List of BeanPostProcessors
-	 * (potentially DestructionAwareBeanPostProcessor), if any
+	 * (potentially DestructionAwareBeanPostProcessor), if any <p/>
+	 * 当前构造器不具有自动寻找close()或shutdown()方法为destroy方法的能力
 	 */
 	public DisposableBeanAdapter(Object bean, List<BeanPostProcessor> postProcessors, AccessControlContext acc) {
 		Assert.notNull(bean, "Disposable bean must not be null");
@@ -390,7 +391,7 @@ class DisposableBeanAdapter implements DisposableBean, Runnable, Serializable {
 			return true;
 		}
 		String destroyMethodName = beanDefinition.getDestroyMethodName();
-		// destroy方法为(inferred)，则自动寻找close()方法或shutdown()方法
+		// destroy方法为(inferred)，则自动寻找close()方法或shutdown()方法（@Bean注解的destroyMethod就是(inferred)）
 		if (AbstractBeanDefinition.INFER_METHOD.equals(destroyMethodName)) {
 			return (ClassUtils.hasMethod(bean.getClass(), CLOSE_METHOD_NAME) ||
 					ClassUtils.hasMethod(bean.getClass(), SHUTDOWN_METHOD_NAME));

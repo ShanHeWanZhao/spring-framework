@@ -347,17 +347,17 @@ public class ScheduledTaskRegistrar implements ScheduledTaskHolder, Initializing
 				addScheduledTask(scheduleTriggerTask(task));
 			}
 		}
-		if (this.cronTasks != null) {
+		if (this.cronTasks != null) { // cron定时任务
 			for (CronTask task : this.cronTasks) {
 				addScheduledTask(scheduleCronTask(task));
 			}
 		}
-		if (this.fixedRateTasks != null) {
+		if (this.fixedRateTasks != null) { // 固定频率定时任务
 			for (IntervalTask task : this.fixedRateTasks) {
 				addScheduledTask(scheduleFixedRateTask(task));
 			}
 		}
-		if (this.fixedDelayTasks != null) {
+		if (this.fixedDelayTasks != null) { // 固定周期定时任务
 			for (IntervalTask task : this.fixedDelayTasks) {
 				addScheduledTask(scheduleFixedDelayTask(task));
 			}

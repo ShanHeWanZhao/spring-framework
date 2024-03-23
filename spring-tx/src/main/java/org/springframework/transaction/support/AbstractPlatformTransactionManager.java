@@ -339,7 +339,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 	 */
 	@Override
 	public final TransactionStatus getTransaction(@Nullable TransactionDefinition definition) throws TransactionException {
-		// 第一次获取时，里面的ConnectionHolder为null
+		// 实现为DataSourceTransactionObject，第一次获取时，里面的ConnectionHolder为null
 		Object transaction = doGetTransaction();
 
 		// Cache debug flag to avoid repeated checks.
@@ -362,18 +362,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		}
 
 		// No existing transaction found -> check propagation behavior to find out how to proceed.
-		/*
-			到这一步，说明当前线程才准备创建事务，如果传播策略为PROPAGATION_MANDATORY，则直接抛出异常
-		说明PROPAGATION_MANDATORY策略只支持已存在的事务，不存在则直接抛异常
-		 */
+		// 到这一步，说明当前线程才准备创建事务，如果传播策略为MANDATORY，则直接抛出异常
+		// 说明MANDATORY策略只支持已存在的事务，不存在则直接抛异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_MANDATORY) {
 			throw new IllegalTransactionStateException(
 					"No existing transaction found for transaction marked with propagation 'mandatory'");
 		}
-		/*
-			PROPAGATION_REQUIRED、PROPAGATION_REQUIRES_NEW、PROPAGATION_NESTED
-			都需要新建事务
-		 */
+		// REQUIRED、REQUIRES_NEW、NESTED 都需要新建事务
 		else if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRED ||
 				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW ||
 				definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
@@ -387,10 +382,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				boolean newSynchronization = (getTransactionSynchronization() != SYNCHRONIZATION_NEVER);
 				DefaultTransactionStatus status = newTransactionStatus(
 						definition, transaction, true, newSynchronization, debugEnabled, suspendedResources);
-				/*
-					构造transaction，包括设置ConnectionHolder、隔离级别、timeout
-					如果是新连接，则绑定到当前线程
-				 */
+				// 构造transaction，包括设置ConnectionHolder、隔离级别、timeout如果是新连接，则绑定到当前线程
 				doBegin(transaction, definition);
 				// 新同步事务的设置，针对于当前线程的设置
 				prepareSynchronization(status, definition);
@@ -401,9 +393,8 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 				throw ex;
 			}
 		}
-		/*
-		PROPAGATION_SUPPORTS、PROPAGATION_NOT_SUPPORTED、PROPAGATION_NEVER都不支持新建事务
-		 */
+		// 初次进入@Transactional且传播策略 SUPPORTS 或 NOT_SUPPORTED 或 NEVER 的都不支持新建事务
+		// 准备一个并不存在的事务，这里叫 "空事务"，且也要准备Synchronization
 		else {
 			// Create "empty" transaction: no actual transaction, but potentially synchronization.
 			if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT && logger.isWarnEnabled()) {
@@ -422,13 +413,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			TransactionDefinition definition, Object transaction, boolean debugEnabled)
 			throws TransactionException {
 
-		// PROPAGATION_NEVER表示不支持任何存在的事务，直接抛异常
+		// NEVER表示不支持任何存在的事务，直接抛异常
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NEVER) {
 			throw new IllegalTransactionStateException(
 					"Existing transaction found for transaction marked with propagation 'never'");
 		}
 
-		// PROPAGATION_NOT_SUPPORTED则会暂停当前事务
+		// NOT_SUPPORTED则会暂停（挂起）当前事务，然后以非事务的方式运行
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NOT_SUPPORTED) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction");
@@ -439,7 +430,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 					definition, null, false, newSynchronization, debugEnabled, suspendedResources);
 		}
 
-		// PROPAGATION_REQUIRES_NEW，暂停当前事务，新开一个事务
+		// REQUIRES_NEW，暂停当前事务，新开一个事务
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_REQUIRES_NEW) {
 			if (debugEnabled) {
 				logger.debug("Suspending current transaction, creating new transaction with name [" +
@@ -461,7 +452,7 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 			}
 		}
 
-		// PROPAGATION_NESTED，先判断是否允许嵌套事务
+		// NESTED，先判断是否允许嵌套事务（默认允许），然后用数据库的Savepoint实现
 		if (definition.getPropagationBehavior() == TransactionDefinition.PROPAGATION_NESTED) {
 			if (!isNestedTransactionAllowed()) {
 				throw new NestedTransactionNotSupportedException(
@@ -494,10 +485,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		}
 
 		// Assumably PROPAGATION_SUPPORTS or PROPAGATION_REQUIRED.
+		// 传播策略为SUPPORTS 或 REQUIRED 或 MANDATORY
+		// 这三个对已存在的事务处理方式是一致的，啥也不做，也就是直接加入已存在的事务
 		if (debugEnabled) {
 			logger.debug("Participating in existing transaction");
 		}
 		if (isValidateExistingTransaction()) {
+			// 校验当前传播策略的隔离等级和是否只读与已存在的事务是否一致，不过默认不校验。
 			if (definition.getIsolationLevel() != TransactionDefinition.ISOLATION_DEFAULT) {
 				Integer currentIsolationLevel = TransactionSynchronizationManager.getCurrentTransactionIsolationLevel();
 				if (currentIsolationLevel == null || currentIsolationLevel != definition.getIsolationLevel()) {
@@ -729,9 +723,13 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 		}
 
 		if (!shouldCommitOnGlobalRollbackOnly() && defStatus.isGlobalRollbackOnly()) {
+			// 当前事务被标记为全局回滚，说明内部事务标记为回滚，但外层需要commit。
+			// 所以会先回滚，再抛UnexpectedRollbackException异常
+
 			if (defStatus.isDebug()) {
 				logger.debug("Global transaction is marked as rollback-only but transactional code requested commit");
 			}
+			// 出现了意外（外层commit，但内层rollback）unexpected为true
 			processRollback(defStatus, true);
 			return;
 		}
@@ -856,19 +854,20 @@ public abstract class AbstractPlatformTransactionManager implements PlatformTran
 					}
 					status.rollbackToHeldSavepoint();
 				}
-				else if (status.isNewTransaction()) {
+				else if (status.isNewTransaction()) { // 是整个事务的创建者才真正执行回滚操作
 					if (status.isDebug()) {
 						logger.debug("Initiating transaction rollback");
 					}
 					doRollback(status);
 				}
-				else {
+				else { // 到这了就代表只是事务的参与者，根据需要将全局事务标记为回滚就行
 					// Participating in larger transaction
 					if (status.hasTransaction()) {
 						if (status.isLocalRollbackOnly() || isGlobalRollbackOnParticipationFailure()) {
 							if (status.isDebug()) {
 								logger.debug("Participating transaction failed - marking existing transaction as rollback-only");
 							}
+							// 仅仅将当前事务标记为全局回滚
 							doSetRollbackOnly(status);
 						}
 						else {

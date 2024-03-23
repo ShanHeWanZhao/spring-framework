@@ -546,10 +546,13 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 				// Initialize event multicaster for this context.
 				// 初始化事件广播器
+				/* 事件广播器默认实现为SimpleApplicationEventMulticaster，
+					专门用来查找对应ApplicationEvent应该使用哪个ApplicationListener（按类型匹配）
+				 */
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
-				// 留给子类初始化其他bean
+				// 留给子类初始化其他bean（spring boot中子类会初始化web服务器）
 				onRefresh();
 
 				// Check for listener beans and register them.
@@ -561,6 +564,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
+				// SmartLifecycle的Bean可以start了，并且发布ContextRefreshedEvent事件
 				finishRefresh();
 			}
 
@@ -853,6 +857,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let post-processors apply to them!
+		// 只是查找ApplicationListener类型的bean，并将beanName给缓存起来，并不会初始化这些bean
 		String[] listenerBeanNames = getBeanNamesForType(ApplicationListener.class, true, false);
 		for (String listenerBeanName : listenerBeanNames) {
 			getApplicationEventMulticaster().addApplicationListenerBean(listenerBeanName);
@@ -894,12 +899,17 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Stop using the temporary ClassLoader for type matching.
+		// 清空临时类加载器
 		beanFactory.setTempClassLoader(null);
 
 		// Allow for caching all bean definition metadata, not expecting further changes.
+		// 冻结BeanDefinition的配置，代表需要的地方可以缓存了
+		// 走到这，BeanDefinition都已经处理完毕了，所以可以考虑缓存了
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		// 实例化所有非lazy加载的单例bean，并在加载完后调用SmartInitializingSingleton接口
+		// SmartInitializingSingleton这个接口就是在实例化所有非lazy且单例bean完成后需要调用的
 		beanFactory.preInstantiateSingletons();
 	}
 
@@ -913,12 +923,15 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		clearResourceCaches();
 
 		// Initialize lifecycle processor for this context.
+		// 创建Lifecycle接口的处理器，用于处理实现了Lifecycle接口的bean
 		initLifecycleProcessor();
 
 		// Propagate refresh to lifecycle processor first.
+		// 调用实现了SmartLifecycle接口，且是autoStartup的bean的start方法
 		getLifecycleProcessor().onRefresh();
 
 		// Publish the final event.
+		// 容器刷新完毕，发布ContextRefreshedEvent事件，通知对应的ApplicationListener
 		publishEvent(new ContextRefreshedEvent(this));
 
 		// Participate in LiveBeansView MBean, if active.

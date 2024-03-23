@@ -42,16 +42,22 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 
 	private final ListableBeanFactory beanFactory;
 
+	/**
+	 * {@link ReflectiveAspectJAdvisorFactory}
+	 */
 	private final AspectJAdvisorFactory advisorFactory;
 
 	@Nullable
 	private volatile List<String> aspectBeanNames;
 
 	/**
-	 * 存放beanName和其注解相关的Advisor信息
+	 * 存放beanName和其注解相关的Advisor信息（单例）
 	 */
 	private final Map<String, List<Advisor>> advisorsCache = new ConcurrentHashMap<>();
 
+	/**
+	 * 存放beanName和其注解相关的Advisor信息工厂生成器（多例）
+	 */
 	private final Map<String, MetadataAwareAspectInstanceFactory> aspectFactoryCache = new ConcurrentHashMap<>();
 
 
@@ -84,6 +90,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 	 * @see #isEligibleBean
 	 */
 	public List<Advisor> buildAspectJAdvisors() {
+		// @Aspect注解BeanName的缓存
 		List<String> aspectNames = this.aspectBeanNames;
 
 		if (aspectNames == null) {
@@ -109,11 +116,14 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 						if (this.advisorFactory.isAspect(beanType)) {
 							aspectNames.add(beanName);
 							AspectMetadata amd = new AspectMetadata(beanType, beanName);
+							// 解析@Aspetc的value值，如果没有，默认kind就为SINGLETON
 							if (amd.getAjType().getPerClause().getKind() == PerClauseKind.SINGLETON) {
 								MetadataAwareAspectInstanceFactory factory =
 										new BeanFactoryAspectInstanceFactory(this.beanFactory, beanName);
-								// 解析标记 AspectJ 注解中的增强方法
+								// 解析标记 AspectJ 注解中的增强方法，并将每个切点方法都构造成一个Advisor
+								// 其实现类为InstantiationModelAwarePointcutAdvisorImpl
 								List<Advisor> classAdvisors = this.advisorFactory.getAdvisors(factory);
+								// 缓存起来切面的解析结果
 								if (this.beanFactory.isSingleton(beanName)) {
 									this.advisorsCache.put(beanName, classAdvisors);
 								}
@@ -141,7 +151,7 @@ public class BeanFactoryAspectJAdvisorsBuilder {
 			}
 		}
 
-		if (aspectNames.isEmpty()) {
+		if (aspectNames.isEmpty()) { // 没有自定义的@Aspect，返回空
 			return Collections.emptyList();
 		}
 		List<Advisor> advisors = new ArrayList<>();

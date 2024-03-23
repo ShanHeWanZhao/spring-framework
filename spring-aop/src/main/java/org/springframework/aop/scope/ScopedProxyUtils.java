@@ -45,7 +45,9 @@ public abstract class ScopedProxyUtils {
 
 	/**
 	 * Generate a scoped proxy for the supplied target bean, registering the target
-	 * bean with an internal name and setting 'targetBeanName' on the scoped proxy.
+	 * bean with an internal name and setting 'targetBeanName' on the scoped proxy. <p/>
+	 * 对目标scope进行代理，使用{@link ScopedProxyFactoryBean}，让每次调用该bean的方法时，都走代理从
+	 * BeanFactory获取目标Scope域，再从这个域中取出真实bean
 	 * @param definition the original bean definition
 	 * @param registry the bean definition registry
 	 * @param proxyTargetClass whether to create a target class proxy
@@ -79,6 +81,7 @@ public abstract class ScopedProxyUtils {
 		}
 
 		// Copy autowire settings from original bean definition.
+		// 代理bean设为primary
 		proxyDefinition.setAutowireCandidate(targetDefinition.isAutowireCandidate());
 		proxyDefinition.setPrimary(targetDefinition.isPrimary());
 		if (targetDefinition instanceof AbstractBeanDefinition) {
@@ -86,6 +89,7 @@ public abstract class ScopedProxyUtils {
 		}
 
 		// The target bean should be ignored in favor of the scoped proxy.
+		// 将原始Bean设为非Primary的
 		targetDefinition.setAutowireCandidate(false);
 		targetDefinition.setPrimary(false);
 

@@ -104,7 +104,10 @@ public class ProxyConfig implements Serializable {
 
 	/**
 	 * Return whether proxies created by this configuration should be
-	 * prevented from being cast to {@link Advised}.
+	 * prevented from being cast to {@link Advised}. <p/>
+	 * 换句话说，此字段决定了代理类是否需要实现 {@link Advised}接口<br/>
+	 * true: 不实现
+	 * false: 实现
 	 */
 	public boolean isOpaque() {
 		return this.opaque;

@@ -69,10 +69,12 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 		}
 
 		/* 判断当前的bean是否已经是个代理类了
-				已近是代理类的bean，就不能再重新创建proxy，直接用现有的，把advisor加入到list中就行
+				已经是代理类的bean，就不需要再重新创建proxy，直接用现有的，把advisor加入到list中就行
 		 */
 		if (bean instanceof Advised) {
 			Advised advised = (Advised) bean;
+			// 只有再当前proxy未frozen的情况下，且原始bean支持被代理才需要增强
+			// 如果一个proxy被frozen了，代表已经不能修改了，其他需要的地方也可以缓存了
 			if (!advised.isFrozen() && isEligible(AopUtils.getTargetClass(bean))) {
 				// Add our local Advisor to the existing proxy's Advisor chain...
 				if (this.beforeExistingAdvisors) {

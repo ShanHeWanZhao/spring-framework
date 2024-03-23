@@ -89,13 +89,14 @@ class ReschedulingRunnable extends DelegatingErrorHandlingRunnable implements Sc
 
 	@Override
 	public void run() {
+		// 记录运行的初始时间和结束时间，以便重新定时（以支持cron表达式）
 		Date actualExecutionTime = new Date();
 		super.run();
 		Date completionTime = new Date();
 		synchronized (this.triggerContextMonitor) {
 			Assert.state(this.scheduledExecutionTime != null, "No scheduled execution");
 			this.triggerContext.update(this.scheduledExecutionTime, actualExecutionTime, completionTime);
-			if (!obtainCurrentFuture().isCancelled()) {
+			if (!obtainCurrentFuture().isCancelled()) { // 只要没有取消，就重新定时执行
 				schedule();
 			}
 		}

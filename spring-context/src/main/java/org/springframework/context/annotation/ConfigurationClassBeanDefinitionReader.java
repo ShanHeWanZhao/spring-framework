@@ -125,6 +125,7 @@ class ConfigurationClassBeanDefinitionReader {
 	private void loadBeanDefinitionsForConfigurationClass(
 			ConfigurationClass configClass, TrackedConditionEvaluator trackedConditionEvaluator) {
 
+		// @Conditional注解判断（OnBeanCondition会在这发挥作用）
 		if (trackedConditionEvaluator.shouldSkip(configClass)) {
 			String beanName = configClass.getBeanName();
 			if (StringUtils.hasLength(beanName) && this.registry.containsBeanDefinition(beanName)) {
@@ -144,7 +145,7 @@ class ConfigurationClassBeanDefinitionReader {
 
 		// @ImportResource注解的结果注册bean
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
-		// @Import注解的结果注册bean
+		// @Import注解(ImportBeanDefinitionRegistrar)的结果注册bean
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 

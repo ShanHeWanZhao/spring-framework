@@ -111,6 +111,7 @@ public abstract class AbstractApplicationEventMulticaster
 				this.defaultRetriever.applicationListeners.remove(singletonTarget);
 			}
 			this.defaultRetriever.applicationListeners.add(listener);
+			// 每次注册新的Listener都要把这个缓存删除。以免走了缓存，取出旧的Listener，但又没使用到新的Listener
 			this.retrieverCache.clear();
 		}
 	}
@@ -180,7 +181,7 @@ public abstract class AbstractApplicationEventMulticaster
 
 		// Quick check for existing entry on ConcurrentHashMap...
 		ListenerRetriever retriever = this.retrieverCache.get(cacheKey);
-		if (retriever != null) {
+		if (retriever != null) { // 缓存中存在，直接返回
 			return retriever.getApplicationListeners();
 		}
 

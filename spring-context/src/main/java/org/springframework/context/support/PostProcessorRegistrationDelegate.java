@@ -303,7 +303,13 @@ final class PostProcessorRegistrationDelegate {
 	/**
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
-	 * getting processed by all BeanPostProcessors.
+	 * getting processed by all BeanPostProcessors. <p/>
+	 * 专门用来检查普通bean是否走完所有的BeanPostProcessor的 <p/>
+	 *
+	 * 一个普通的bean在实例化时，正常情况下应该走完所有的BeanPostProcessor，
+	 * 但当只注册了部分的BeanPostProcessor(放到IOC容器中)时，
+	 * 此时实例化一个bean可能就导致还未注册的BeanPostProcessor处理不了（看优先级），
+	 * 就会由这个checker来日志提醒
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 
@@ -325,6 +331,7 @@ final class PostProcessorRegistrationDelegate {
 
 		@Override
 		public Object postProcessAfterInitialization(Object bean, String beanName) {
+			// 非BeanPostProcessor + 非spring内部的bean + BeanPostProcessor还没注册完的
 			if (!(bean instanceof BeanPostProcessor) && !isInfrastructureBean(beanName) &&
 					this.beanFactory.getBeanPostProcessorCount() < this.beanPostProcessorTargetCount) {
 				if (logger.isInfoEnabled()) {

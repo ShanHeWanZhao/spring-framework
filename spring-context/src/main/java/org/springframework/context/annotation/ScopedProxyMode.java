@@ -31,7 +31,8 @@ public enum ScopedProxyMode {
 
 	/**
 	 * Default typically equals {@link #NO}, unless a different default
-	 * has been configured at the component-scan instruction level.
+	 * has been configured at the component-scan instruction level. <p/>
+	 * 就是NO
 	 */
 	DEFAULT,
 
@@ -40,18 +41,23 @@ public enum ScopedProxyMode {
 	 * <p>This proxy-mode is not typically useful when used with a
 	 * non-singleton scoped instance, which should favor the use of the
 	 * {@link #INTERFACES} or {@link #TARGET_CLASS} proxy-modes instead if it
-	 * is to be used as a dependency.
+	 * is to be used as a dependency. <p/>
+	 * 不使用代理，每次想从特定域中获取bean都应该使用BeanFactory来getBean
 	 */
 	NO,
 
 	/**
 	 * Create a JDK dynamic proxy implementing <i>all</i> interfaces exposed by
-	 * the class of the target object.
+	 * the class of the target object. <p/>
+	 * jdk代理 <br/>
+	 * 这样我们可以注入一个bean的代理，使用特定域下的bean就是使用单例bean一样,在程序启动时就注入到需要的地方 <br/>
+	 * 原理就是这个代理bean只是一个模板，每次调用bean的方法就会先通过BeanFactory拿到真实的bean，在用这个真实的bean执行对应方法
 	 */
 	INTERFACES,
 
 	/**
-	 * Create a class-based proxy (uses CGLIB).
+	 * Create a class-based proxy (uses CGLIB). <><p/>
+	 * cglib代理
 	 */
 	TARGET_CLASS
 

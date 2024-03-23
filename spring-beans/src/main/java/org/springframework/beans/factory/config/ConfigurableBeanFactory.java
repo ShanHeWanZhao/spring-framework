@@ -355,7 +355,8 @@ public interface ConfigurableBeanFactory extends HierarchicalBeanFactory, Single
 
 	/**
 	 * Register a dependent bean for the given bean,
-	 * to be destroyed before the given bean is destroyed.
+	 * to be destroyed before the given bean is destroyed. <p/>
+	 * 第二个依赖第一个（即第二个里面引用了第一个bean）
 	 * @param beanName the name of the bean
 	 * @param dependentBeanName the name of the dependent bean
 	 * @since 2.5

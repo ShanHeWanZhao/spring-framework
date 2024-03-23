@@ -289,7 +289,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		// 构造方法唯一标识（例如：com.litb.UserService.save）
 		final String joinpointIdentification = methodIdentification(method, targetClass, txAttr);
 
-		// 声明式事务处理
+		// 声明式事务处理（@Transactional注解就走这）
 		if (txAttr == null || !(tm instanceof CallbackPreferringPlatformTransactionManager)) {
 			// Standard transaction demarcation with getTransaction and commit/rollback calls.
 			// 创建 TransactionInfo
@@ -563,6 +563,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 						"] after exception: " + ex);
 			}
 			if (txInfo.transactionAttribute != null && txInfo.transactionAttribute.rollbackOn(ex)) {
+				// 命中回滚异常，需要操作事务回滚
 				try {
 					txInfo.getTransactionManager().rollback(txInfo.getTransactionStatus());
 				}

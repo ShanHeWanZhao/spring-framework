@@ -132,9 +132,11 @@ public class SimpleApplicationEventMulticaster extends AbstractApplicationEventM
 
 	@Override
 	public void multicastEvent(final ApplicationEvent event, @Nullable ResolvableType eventType) {
+		// 将ApplicationEvent构造为ResolvableType，用于支持后续类型判断
 		ResolvableType type = (eventType != null ? eventType : resolveDefaultEventType(event));
-		// 有线程池就用其他线程执行广播任务
+		// 有线程池就用其他线程执行广播任务（默认为null，表示时间的传播和处理都在当前线程中进行）
 		Executor executor = getTaskExecutor();
+		// 获取所有匹配的ApplicationListener，并广播事件
 		for (ApplicationListener<?> listener : getApplicationListeners(event, type)) {
 			if (executor != null) {
 				executor.execute(() -> invokeListener(listener, event));

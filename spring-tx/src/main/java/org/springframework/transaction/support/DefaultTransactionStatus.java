@@ -36,7 +36,9 @@ import org.springframework.util.Assert;
  * <p><b>NOTE:</b> This is <i>not</i> intended for use with other PlatformTransactionManager
  * implementations, in particular not for mock transaction managers in testing environments.
  * Use the alternative {@link SimpleTransactionStatus} class or a mock for the plain
- * {@link org.springframework.transaction.TransactionStatus} interface instead.
+ * {@link org.springframework.transaction.TransactionStatus} interface instead. <p/>
+ *
+ * 每个@Transactional注解都会生成一个DefaultTransactionStatus，用于支持嵌套注解的情况
  *
  * @author Juergen Hoeller
  * @since 19.01.2004
@@ -50,17 +52,37 @@ import org.springframework.util.Assert;
  */
 public class DefaultTransactionStatus extends AbstractTransactionStatus {
 
+	/**
+	 * 如果当前@Transactional运行在有事务的情况下，为DataSourceTransactionObject。
+	 * 这个字段在同一个事务内的每个@Transactional都不一样，但DataSourceTransactionObject内部的ConnectionHolder一样
+	 * <p/>
+	 * 如果当前@Transactional运行在非事务的情况下，就为null
+	 */
 	@Nullable
 	private final Object transaction;
 
+	/**
+	 * true: 代表当前@Transactional是新事物的创建者，而不是加入了已存在事务的情况 <p/>
+	 * 这个新事物并不代表真正存在事务，事物的存在要根据上面那个transaction判断
+	 */
 	private final boolean newTransaction;
 
 	private final boolean newSynchronization;
 
+	/**
+	 * 当前事务是否只读
+	 */
 	private final boolean readOnly;
 
+	/**
+	 * 当前日志是否是debug等级以上
+	 */
 	private final boolean debug;
 
+	/**
+	 * 当当前@Transactional是嵌套事务时，用以保存上个事务的各种数据 <p/>
+	 * SuspendedResourcesHolder为一种实现
+	 */
 	@Nullable
 	private final Object suspendedResources;
 

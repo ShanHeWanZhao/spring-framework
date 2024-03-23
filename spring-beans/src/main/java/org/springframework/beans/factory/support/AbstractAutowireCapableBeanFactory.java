@@ -942,7 +942,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 	/**
 	 * Obtain a reference for early access to the specified bean,
-	 * typically for the purpose of resolving a circular reference.
+	 * typically for the purpose of resolving a circular reference. <p/>
+	 * 为什么要这么封装：<br/>
+	 * 为了解决循环引用要提前暴露对象，但对于需要增强的类来说，就是一个新的对象了，
+	 * 需要在暴露之前就确定这个对象是否需要增强，且创建一个增强类来代替原始bean的引用，供其他依赖bean使用 <br/>
+	 * 简单来说就是用来提前曝光AOP对象的
 	 * @param beanName the name of the bean (for error handling purposes)
 	 * @param mbd the merged bean definition for the bean
 	 * @param bean the raw bean instance
@@ -1769,7 +1773,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}, getAccessControlContext());
 		}
 		else {
-			// 三种aware
+			// 三种aware(BeanName，BeanClassLoader，BeanFactory)
 			invokeAwareMethods(beanName, bean);
 		}
 

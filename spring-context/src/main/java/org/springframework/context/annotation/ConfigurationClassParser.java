@@ -137,7 +137,8 @@ class ConfigurationClassParser {
 	private final List<String> propertySourceNames = new ArrayList<>();
 
 	/**
-	 * org.springframework.context.annotation.Import 注解的处理结果
+	 * 1、org.springframework.context.annotation.Import 注解的处理结果 <p/>
+	 * 2、循环@Import的处理
 	 */
 	private final ImportStack importStack = new ImportStack();
 
@@ -268,6 +269,7 @@ class ConfigurationClassParser {
 	protected final SourceClass doProcessConfigurationClass(ConfigurationClass configClass, SourceClass sourceClass)
 			throws IOException {
 
+		// 如果类包含元注解@Component，则递归处理当前类的所有内部类（包括private的）
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
 			processMemberClasses(configClass, sourceClass);
@@ -370,7 +372,7 @@ class ConfigurationClassParser {
 			}
 			OrderComparator.sort(candidates);
 			for (SourceClass candidate : candidates) {
-				if (this.importStack.contains(configClass)) {
+				if (this.importStack.contains(configClass)) { // 循环Import，抛异常
 					this.problemReporter.error(new CircularImportProblem(configClass, this.importStack));
 				}
 				else {
@@ -571,7 +573,7 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
-					// ImportSelector解析
+					// ImportSelector解析（会循环解析）
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
@@ -589,6 +591,7 @@ class ConfigurationClassParser {
 						}
 					}
 					// ImportBeanDefinitionRegistrar解析
+					// 不会递归，因为这个接口已经给了BeanDefinitionRegistry，就是让你自由发挥注册BeanDefinition的
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
@@ -597,9 +600,10 @@ class ConfigurationClassParser {
 								BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								registrar, this.environment, this.resourceLoader, this.registry);
+						// 先缓存，等待后续统一调用
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
-					else {
+					else { // 其他被导入的类（从头开始递归解析）
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
 						this.importStack.registerImport(
@@ -774,24 +778,26 @@ class ConfigurationClassParser {
 		 */
 		public void handle(ConfigurationClass configClass, DeferredImportSelector importSelector) {
 			DeferredImportSelectorHolder holder = new DeferredImportSelectorHolder(configClass, importSelector);
-			if (this.deferredImportSelectors == null) {
+			if (this.deferredImportSelectors == null) { // 为空则代表正在处理原来的DeferredImportSelectors，就直接处理当前的DeferredImportSelector
 				DeferredImportSelectorGroupingHandler handler = new DeferredImportSelectorGroupingHandler();
 				handler.register(holder);
 				handler.processGroupImports();
 			}
-			else {
+			else { // 不为空就先存到List，等待后续统一处理
 				this.deferredImportSelectors.add(holder);
 			}
 		}
 
 		public void process() {
 			List<DeferredImportSelectorHolder> deferredImports = this.deferredImportSelectors;
+			// 设为null，表示正在处理DeferredImportSelector
 			this.deferredImportSelectors = null;
 			try {
 				if (deferredImports != null) {
 					DeferredImportSelectorGroupingHandler handler = new DeferredImportSelectorGroupingHandler();
-					deferredImports.sort(DEFERRED_IMPORT_COMPARATOR);
+					deferredImports.sort(DEFERRED_IMPORT_COMPARATOR); // Order排序
 					deferredImports.forEach(handler::register);
+					// 真正处理DeferredImportSelector
 					handler.processGroupImports();
 				}
 			}
@@ -891,6 +897,7 @@ class ConfigurationClassParser {
 		 */
 		public Iterable<Group.Entry> getImports() {
 			for (DeferredImportSelectorHolder deferredImport : this.deferredImports) {
+				// 处理DeferredImportSelector
 				this.group.process(deferredImport.getConfigurationClass().getMetadata(),
 						deferredImport.getImportSelector());
 			}
@@ -971,7 +978,7 @@ class ConfigurationClassParser {
 
 		public Collection<SourceClass> getMemberClasses() throws IOException {
 			Object sourceToProcess = this.source;
-			if (sourceToProcess instanceof Class) {
+			if (sourceToProcess instanceof Class) { // 基于反射
 				Class<?> sourceClass = (Class<?>) sourceToProcess;
 				try {
 					Class<?>[] declaredClasses = sourceClass.getDeclaredClasses();
@@ -987,7 +994,7 @@ class ConfigurationClassParser {
 					sourceToProcess = metadataReaderFactory.getMetadataReader(sourceClass.getName());
 				}
 			}
-
+			// 基于ASM
 			// ASM-based resolution - safe for non-resolvable classes as well
 			MetadataReader sourceReader = (MetadataReader) sourceToProcess;
 			String[] memberClassNames = sourceReader.getClassMetadata().getMemberClassNames();

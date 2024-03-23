@@ -66,6 +66,9 @@ final class ConfigurationClass {
 	private final Map<ImportBeanDefinitionRegistrar, AnnotationMetadata> importBeanDefinitionRegistrars =
 			new LinkedHashMap<>();
 
+	/**
+	 * 注册bean时注解@Conditional跳过的beanName集和
+	 */
 	final Set<String> skippedBeanMethods = new HashSet<>();
 
 

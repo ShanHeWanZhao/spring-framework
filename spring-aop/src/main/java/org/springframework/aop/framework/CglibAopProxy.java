@@ -84,12 +84,19 @@ import org.springframework.util.ObjectUtils;
 class CglibAopProxy implements AopProxy, Serializable {
 
 	// Constants for CGLIB callback array indices
+	// 切面方法的代理（DynamicAdvisedInterceptor）
 	private static final int AOP_PROXY = 0;
+	// 非切面方法，但这个Class需要暴露代理或方法的返回就是这个Class（一般用的都是StaticUnadvisedExposedInterceptor）
 	private static final int INVOKE_TARGET = 1;
+	// finalize方法（SerializableNoOp）
 	private static final int NO_OVERRIDE = 2;
+	// 非切面方法，且这个Class不需要暴露代理且方法的返回不是这个Class（就用纯原始对象，一般都是StaticDispatcher）
 	private static final int DISPATCH_TARGET = 3;
+	// Advised接口的方法（AdvisedDispatcher）
 	private static final int DISPATCH_ADVISED = 4;
+	// equals方法（EqualsInterceptor）
 	private static final int INVOKE_EQUALS = 5;
+	// hashcode方法（HashCodeInterceptor）
 	private static final int INVOKE_HASHCODE = 6;
 
 
@@ -162,9 +169,10 @@ class CglibAopProxy implements AopProxy, Serializable {
 		}
 
 		try {
+			// 上一个被代理的目标类class（有可能已经是cglib的代理类了）
 			Class<?> rootClass = this.advised.getTargetClass();
 			Assert.state(rootClass != null, "Target class must be available for creating a CGLIB proxy");
-
+			// 真正代理的目标类class
 			Class<?> proxySuperClass = rootClass;
 			if (ClassUtils.isCglibProxyClass(rootClass)) { // 已经是个cglib代理类了，就需要把真正被代理类的class和接口找出来
 				proxySuperClass = rootClass.getSuperclass();
@@ -179,6 +187,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 			validateClassIfNecessary(proxySuperClass, classLoader);
 
 			// Configure CGLIB Enhancer...
+			// 创建通用的增强器，准备增强了
 			Enhancer enhancer = createEnhancer();
 			if (classLoader != null) {
 				enhancer.setClassLoader(classLoader);
@@ -187,23 +196,28 @@ class CglibAopProxy implements AopProxy, Serializable {
 					enhancer.setUseCache(false);
 				}
 			}
+			// 设置被代理类class为增强类的父类
 			enhancer.setSuperclass(proxySuperClass);
+			// 对增强类设置接口：Advised和SpringProxy
 			enhancer.setInterfaces(AopProxyUtils.completeProxiedInterfaces(this.advised));
 			enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
 			enhancer.setStrategy(new ClassLoaderAwareUndeclaredThrowableStrategy(classLoader));
 
-			// 设置拦截器
+			// 设置拦截器（真正支持切面操作的拦截器）
 			Callback[] callbacks = getCallbacks(rootClass);
 			Class<?>[] types = new Class<?>[callbacks.length];
 			for (int x = 0; x < types.length; x++) {
 				types[x] = callbacks[x].getClass();
 			}
 			// fixedInterceptorMap only populated at this point, after getCallbacks call above
+			// 非常重要，就是通过这个filter来确定某个方法应该使用哪一个Callback的
+			// 所以，代理类的任何一个方法只会用上一个Callback
 			enhancer.setCallbackFilter(new ProxyCallbackFilter(
 					this.advised.getConfigurationOnlyCopy(), this.fixedInterceptorMap, this.fixedInterceptorOffset));
 			enhancer.setCallbackTypes(types);
 
 			// Generate the proxy class and create a proxy instance.
+			// 生成代理类的class并实例化其对象
 			return createProxyClassAndInstance(enhancer, callbacks);
 		}
 		catch (CodeGenerationException | IllegalArgumentException ex) {
@@ -286,6 +300,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 		// Parameters used for optimization choices...
 		boolean exposeProxy = this.advised.isExposeProxy();
 		boolean isFrozen = this.advised.isFrozen();
+		// 一般都为true
 		boolean isStatic = this.advised.getTargetSource().isStatic();
 
 		// Choose an "aop" interceptor (used for AOP calls).
@@ -312,12 +327,13 @@ class CglibAopProxy implements AopProxy, Serializable {
 				new StaticDispatcher(this.advised.getTargetSource().getTarget()) : new SerializableNoOp());
 
 		Callback[] mainCallbacks = new Callback[] {
-				aopInterceptor,  // for normal advice
+				aopInterceptor,  // for normal advice （最通用的Callback，对于普通切面）
 				targetInterceptor,  // invoke target without considering advice, if optimized
-				new SerializableNoOp(),  // no override for methods mapped to this
-				targetDispatcher, this.advisedDispatcher,
-				new EqualsInterceptor(this.advised),
-				new HashCodeInterceptor(this.advised)
+				new SerializableNoOp(),  // no override for methods mapped to this (finalize方法使用这个callback)
+				targetDispatcher,
+				this.advisedDispatcher, // Advised接口方法走这个Callback
+				new EqualsInterceptor(this.advised), // equal方法拦截
+				new HashCodeInterceptor(this.advised) // hashCode方法拦截
 		};
 
 		Callback[] callbacks;
@@ -671,6 +687,8 @@ class CglibAopProxy implements AopProxy, Serializable {
 			TargetSource targetSource = this.advised.getTargetSource();
 			try {
 				if (this.advised.exposeProxy) {
+					// 在当前线程上下文中设置了需要暴露代理，就要设置到当前线程ThreadLocal中
+					// 就是用来解决方法内部需要调用代理方法
 					// Make invocation available if necessary.
 					oldProxy = AopContext.setCurrentProxy(proxy);
 					setProxyContext = true;
@@ -680,6 +698,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 				// 例：Session域从SimpleBeanTargetSource中获取，再转到BeanFactory，再转到SessionScope中，获取目标对象
 				target = targetSource.getTarget();
 				Class<?> targetClass = (target != null ? target.getClass() : null);
+				// 对当前方法构造切面链并缓存
 				List<Object> chain = this.advised.getInterceptorsAndDynamicInterceptionAdvice(method, targetClass);
 				Object retVal;
 				// Check whether we only have one InvokerInterceptor: that is,
@@ -693,7 +712,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 					Object[] argsToUse = AopProxyUtils.adaptArgumentsIfNecessary(method, args);
 					retVal = methodProxy.invoke(target, argsToUse);
 				}
-				else {
+				else { // 存在切面，构造方法调用器并执行
 					// We need to create a method invocation...
 					retVal = new CglibMethodInvocation(proxy, target, method, args, targetClass, chain, methodProxy).proceed();
 				}
@@ -704,7 +723,7 @@ class CglibAopProxy implements AopProxy, Serializable {
 				if (target != null && !targetSource.isStatic()) {
 					targetSource.releaseTarget(target);
 				}
-				if (setProxyContext) {
+				if (setProxyContext) { // 方法代理全部执行完毕，恢复执行前的现场
 					// Restore old proxy.
 					AopContext.setCurrentProxy(oldProxy);
 				}
@@ -818,30 +837,32 @@ class CglibAopProxy implements AopProxy, Serializable {
 		 * If it possible for the method to return {@code this} then a
 		 * StaticUnadvisedInterceptor is used for static targets - the
 		 * DynamicUnadvisedInterceptor already considers this.</dd>
-		 * </dl>
+		 * </dl> <p/>
+		 * 用来确定被增强的类的每一个方法该使用具体的某个拦截器<br/>
+		 * 返回的是拦截器的数组索引（org.springframework.cglib.proxy.Callback数组）
 		 */
 		@Override
 		public int accept(Method method) {
-			if (AopUtils.isFinalizeMethod(method)) {
+			if (AopUtils.isFinalizeMethod(method)) { // finalize 方法使用SerializableNoOp，不做任何操作（原方法也不调用）
 				logger.trace("Found finalize() method - using NO_OVERRIDE");
 				return NO_OVERRIDE;
 			}
 			if (!this.advised.isOpaque() && method.getDeclaringClass().isInterface() &&
-					method.getDeclaringClass().isAssignableFrom(Advised.class)) {
+					method.getDeclaringClass().isAssignableFrom(Advised.class)) { // Advised接口上的方法，使用AdvisedDispatcher这个Callback
 				if (logger.isTraceEnabled()) {
 					logger.trace("Method is declared on Advised interface: " + method);
 				}
 				return DISPATCH_ADVISED;
 			}
 			// We must always proxy equals, to direct calls to this.
-			if (AopUtils.isEqualsMethod(method)) {
+			if (AopUtils.isEqualsMethod(method)) { // equal方法，使用EqualsInterceptor
 				if (logger.isTraceEnabled()) {
 					logger.trace("Found 'equals' method: " + method);
 				}
 				return INVOKE_EQUALS;
 			}
 			// We must always calculate hashCode based on the proxy.
-			if (AopUtils.isHashCodeMethod(method)) {
+			if (AopUtils.isHashCodeMethod(method)) { // hashcode方法，使用HashCodeInterceptor
 				if (logger.isTraceEnabled()) {
 					logger.trace("Found 'hashCode' method: " + method);
 				}
@@ -854,9 +875,9 @@ class CglibAopProxy implements AopProxy, Serializable {
 			boolean exposeProxy = this.advised.isExposeProxy();
 			boolean isStatic = this.advised.getTargetSource().isStatic();
 			boolean isFrozen = this.advised.isFrozen();
-			if (haveAdvice || !isFrozen) {
+			if (haveAdvice || !isFrozen) { // 存在切面
 				// If exposing the proxy, then AOP_PROXY must be used.
-				if (exposeProxy) {
+				if (exposeProxy) { // 如果在当前线程需要暴露代理，使用DynamicAdvisedInterceptor
 					if (logger.isTraceEnabled()) {
 						logger.trace("Must expose proxy on advised method: " + method);
 					}
