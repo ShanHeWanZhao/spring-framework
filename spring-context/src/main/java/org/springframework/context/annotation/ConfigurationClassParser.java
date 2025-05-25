@@ -290,7 +290,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
-		// 处理@ComponentScan注解
+		// 解析@ComponentScans和@ComponentScan注解
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
@@ -365,6 +365,7 @@ class ConfigurationClassParser {
 		if (!memberClasses.isEmpty()) {
 			List<SourceClass> candidates = new ArrayList<>(memberClasses.size());
 			for (SourceClass memberClass : memberClasses) {
+				// 未处理过且是 full或lite配置类，才有资格被解析
 				if (ConfigurationClassUtils.isConfigurationCandidate(memberClass.getMetadata()) &&
 						!memberClass.getMetadata().getClassName().equals(configClass.getMetadata().getClassName())) {
 					candidates.add(memberClass);
@@ -405,29 +406,47 @@ class ConfigurationClassParser {
 	}
 
 	/**
-	 * Retrieve the metadata for all <code>@Bean</code> methods.
+	 * 检索当前配置类中标注了 @Bean 的方法元信息。
+	 * 为了保证方法顺序的确定性（deterministic order），尽可能使用 ASM（字节码解析）代替反射。
+	 *
+	 * 原因：
+	 * - Java 标准反射 API 获取方法时的顺序是不确定的（甚至在相同 JVM 不同运行中也可能不一致），
+	 *   这可能导致 Spring 注册 Bean 的顺序不一致（虽然不影响逻辑，但在调试、测试、日志中可能造成困惑）。
+	 *
+	 * 步骤：
+	 * 1. 优先使用反射方式拿到方法信息（Spring 的标准操作方式）
+	 * 2. 若方法数量大于1，并且是通过 StandardAnnotationMetadata（基于反射）解析的，
+	 *    尝试再用 ASM 重新读取 class 文件，获取字节码层面的方法顺序
+	 * 3. 如果 ASM 读取成功，且其中的 Bean 方法包含了所有反射获取的 Bean 方法（根据方法名比对），
+	 *    就以 ASM 顺序为准，覆盖原来的 beanMethods 集合
+	 * 4. 如果 ASM 读取失败或方法缺失，则继续使用反射的 beanMethods，容忍顺序不一致
 	 */
 	private Set<MethodMetadata> retrieveBeanMethodMetadata(SourceClass sourceClass) {
 		AnnotationMetadata original = sourceClass.getMetadata();
 		Set<MethodMetadata> beanMethods = original.getAnnotatedMethods(Bean.class.getName());
+		// 如果 Bean 方法数量大于1 且使用的是基于反射的元数据，尝试使用 ASM 获取确定顺序
 		if (beanMethods.size() > 1 && original instanceof StandardAnnotationMetadata) {
 			// Try reading the class file via ASM for deterministic declaration order...
 			// Unfortunately, the JVM's standard reflection returns methods in arbitrary
 			// order, even between different runs of the same application on the same JVM.
 			try {
+				// 使用 ASM 从 class 文件中获取元数据（包括方法顺序）
 				AnnotationMetadata asm =
 						this.metadataReaderFactory.getMetadataReader(original.getClassName()).getAnnotationMetadata();
 				Set<MethodMetadata> asmMethods = asm.getAnnotatedMethods(Bean.class.getName());
+				// 若 ASM 获取的 @Bean 方法数量 >= 反射获取的，且名字匹配，则使用 ASM 顺序
 				if (asmMethods.size() >= beanMethods.size()) {
 					Set<MethodMetadata> selectedMethods = new LinkedHashSet<>(asmMethods.size());
 					for (MethodMetadata asmMethod : asmMethods) {
 						for (MethodMetadata beanMethod : beanMethods) {
 							if (beanMethod.getMethodName().equals(asmMethod.getMethodName())) {
+								// 保留反射对象，但按 ASM 顺序排列
 								selectedMethods.add(beanMethod);
 								break;
 							}
 						}
 					}
+					// 如果反射获取的所有方法都在 ASM 中找到，则使用 ASM 顺序
 					if (selectedMethods.size() == beanMethods.size()) {
 						// All reflection-detected methods found in ASM method set -> proceed
 						beanMethods = selectedMethods;
@@ -437,6 +456,7 @@ class ConfigurationClassParser {
 			catch (IOException ex) {
 				logger.debug("Failed to read class file via ASM for determining @Bean method order", ex);
 				// No worries, let's continue with the reflection metadata we started with...
+				// 忽略异常，降级使用反射获取的 Bean 方法集合，虽然顺序不稳定，但逻辑不受影响
 			}
 		}
 		return beanMethods;
@@ -559,6 +579,17 @@ class ConfigurationClassParser {
 		}
 	}
 
+	/**
+	 * 处理 @Import 注解导入的配置类，包括三类情况：
+	 * 1. ImportSelector（含 DeferredImportSelector）—— 动态返回要导入的类名；
+	 * 2. ImportBeanDefinitionRegistrar —— 动态注册 BeanDefinition；
+	 * 3. 普通类 —— 按照配置类继续解析（递归）。
+	 *
+	 * @param configClass 当前正在处理的配置类（被 @Import 注解引入的类）
+	 * @param currentSourceClass 当前配置类的元信息（SourceClass 形式）
+	 * @param importCandidates 通过 @Import 注解声明导入的类（可能是三类）
+	 * @param checkForCircularImports 是否检查循环导入
+	 */
 	private void processImports(ConfigurationClass configClass, SourceClass currentSourceClass,
 			Collection<SourceClass> importCandidates, boolean checkForCircularImports) {
 
@@ -566,10 +597,12 @@ class ConfigurationClassParser {
 			return;
 		}
 
+		// 检查是否存在循环导入链，例如 A -> B -> C -> A
 		if (checkForCircularImports && isChainedImportOnStack(configClass)) {
 			this.problemReporter.error(new CircularImportProblem(configClass, this.importStack));
 		}
 		else {
+			// 压栈当前 configClass，防止循环引用
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
@@ -581,12 +614,14 @@ class ConfigurationClassParser {
 						// aware注入
 						ParserStrategyUtils.invokeAwareMethods(
 								selector, this.environment, this.resourceLoader, this.registry);
-						if (selector instanceof DeferredImportSelector) { // DeferredImportSelector暂不处理
+						if (selector instanceof DeferredImportSelector) { // DeferredImportSelector暂不处理（Spring boot用到）
 							this.deferredImportSelectorHandler.handle(configClass, (DeferredImportSelector) selector);
 						}
-						else { // 其他ImportSelector直接在这处理完毕
+						else {
+							// 普通 ImportSelector 立即执行 selectImports() 获取要导入的类名数组
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames);
+							// 递归解析新导入的类
 							processImports(configClass, currentSourceClass, importSourceClasses, false);
 						}
 					}
@@ -600,12 +635,15 @@ class ConfigurationClassParser {
 								BeanUtils.instantiateClass(candidateClass, ImportBeanDefinitionRegistrar.class);
 						ParserStrategyUtils.invokeAwareMethods(
 								registrar, this.environment, this.resourceLoader, this.registry);
-						// 先缓存，等待后续统一调用
+						// 将 registrar 注册到当前配置类中，后续统一调用
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
-					else { // 其他被导入的类（从头开始递归解析）
+					else {
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
+
+						// 其他类型的类（即非 ImportSelector / ImportBeanDefinitionRegistrar）
+						// 作为普通的 @Configuration 类进行解析处理（可能再次触发 @Import）
 						this.importStack.registerImport(
 								currentSourceClass.getMetadata(), candidate.getMetadata().getClassName());
 						processConfigurationClass(candidate.asConfigClass(configClass));
@@ -621,6 +659,7 @@ class ConfigurationClassParser {
 						configClass.getMetadata().getClassName() + "]", ex);
 			}
 			finally {
+				// 解析完成后出栈
 				this.importStack.pop();
 			}
 		}
@@ -778,12 +817,15 @@ class ConfigurationClassParser {
 		 */
 		public void handle(ConfigurationClass configClass, DeferredImportSelector importSelector) {
 			DeferredImportSelectorHolder holder = new DeferredImportSelectorHolder(configClass, importSelector);
-			if (this.deferredImportSelectors == null) { // 为空则代表正在处理原来的DeferredImportSelectors，就直接处理当前的DeferredImportSelector
+			if (this.deferredImportSelectors == null) {
+				// deferredImportSelectors 为 null，说明当前不是“延迟批量处理阶段”，而是递归触发时遇到的 DeferredImportSelector
+				// 此时直接单独处理当前这个 DeferredImportSelector，不等到后面统一处理
 				DeferredImportSelectorGroupingHandler handler = new DeferredImportSelectorGroupingHandler();
 				handler.register(holder);
 				handler.processGroupImports();
 			}
-			else { // 不为空就先存到List，等待后续统一处理
+			else {
+				// deferredImportSelectors 不为 null，说明当前处于“延迟导入收集阶段”，此时仅将当前 holder 暂存下来，后续由 ConfigurationClassParser#process 统一处理
 				this.deferredImportSelectors.add(holder);
 			}
 		}

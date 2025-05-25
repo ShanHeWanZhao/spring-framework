@@ -256,6 +256,9 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 		Connection con = null;
 
 		try {
+			// 是否需要新建 Connection：满足任意一个条件即可
+			// 1. 当前没有 ConnectionHolder（首次创建事务）
+			// 2. 当前 ConnectionHolder 已参与过其他事务（如嵌套事务 REQUIRES_NEW 中旧连接已同步过）。此时不能复用旧连接，必须重新获取
 			if (!txObject.hasConnectionHolder() ||
 					txObject.getConnectionHolder().isSynchronizedWithTransaction()) {
 				Connection newCon = obtainDataSource().getConnection();
@@ -265,10 +268,11 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 				txObject.setConnectionHolder(new ConnectionHolder(newCon), true);
 			}
 
+			// 标记当前连接已参与事务同步
 			txObject.getConnectionHolder().setSynchronizedWithTransaction(true);
 			con = txObject.getConnectionHolder().getConnection();
 
-			// 设置隔离级别
+			// 根据事务定义设置隔离级别，并记录旧值，事务完成后会恢复
 			Integer previousIsolationLevel = DataSourceUtils.prepareConnectionForTransaction(con, definition);
 			txObject.setPreviousIsolationLevel(previousIsolationLevel);
 
@@ -286,23 +290,24 @@ public class DataSourceTransactionManager extends AbstractPlatformTransactionMan
 
 			// readOnly 设置
 			prepareTransactionalConnection(con, definition);
-			// 激活事务
+			// 标记事务为“激活”状态（事务已开启）
 			txObject.getConnectionHolder().setTransactionActive(true);
 
-			// 确定timeout
+			// 设置事务超时时间（单位：秒）
 			int timeout = determineTimeout(definition);
 			if (timeout != TransactionDefinition.TIMEOUT_DEFAULT) {
 				txObject.getConnectionHolder().setTimeoutInSeconds(timeout);
 			}
 
 			// Bind the connection holder to the thread.
-			// 绑定Connection到当前线程
+			// 将当前 ConnectionHolder 绑定到线程上下文中（核心 ThreadLocal 操作）
 			if (txObject.isNewConnectionHolder()) {
 				TransactionSynchronizationManager.bindResource(obtainDataSource(), txObject.getConnectionHolder());
 			}
 		}
 
 		catch (Throwable ex) {
+			// 如果创建连接过程中出现异常，释放资源并清理 ConnectionHolder
 			if (txObject.isNewConnectionHolder()) {
 				DataSourceUtils.releaseConnection(con, obtainDataSource());
 				txObject.setConnectionHolder(null, false);

@@ -127,6 +127,7 @@ class ConfigurationClassBeanDefinitionReader {
 
 		// @Conditional注解判断（OnBeanCondition会在这发挥作用）
 		if (trackedConditionEvaluator.shouldSkip(configClass)) {
+			// 若被跳过且之前已注册过 beanDefinition，则将其移除
 			String beanName = configClass.getBeanName();
 			if (StringUtils.hasLength(beanName) && this.registry.containsBeanDefinition(beanName)) {
 				this.registry.removeBeanDefinition(beanName);
@@ -135,6 +136,7 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 如果是被 @Import 导入的配置类，注册为一个 beanDefinition
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
@@ -143,7 +145,7 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
-		// @ImportResource注解的结果注册bean
+		// 处理 @ImportResource 注解导入的 XML 配置文件，注册其中定义的 bean
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
 		// @Import注解(ImportBeanDefinitionRegistrar)的结果注册bean
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
@@ -204,6 +206,7 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		// Has this effectively been overridden before (e.g. via XML)?
+		// 4. 检查是否存在覆盖（例如 XML ），再根据beanName判断是否抛异常
 		if (isOverriddenByExistingDefinition(beanMethod, beanName)) {
 			if (beanName.equals(beanMethod.getConfigurationClass().getBeanName())) {
 				throw new BeanDefinitionStoreException(beanMethod.getConfigurationClass().getResource().getDescription(),
@@ -213,11 +216,13 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		// 构建 BeanDefinition，封装元信息
 		ConfigurationClassBeanDefinition beanDef = new ConfigurationClassBeanDefinition(configClass, metadata);
 		beanDef.setSource(this.sourceExtractor.extractSource(metadata, configClass.getResource()));
 
 		// 使用工厂模式实例化bean
-		if (metadata.isStatic()) { // 静态方法直接使用class对象调用
+		if (metadata.isStatic()) {
+			// 静态方法直接使用class对象调用
 			// static @Bean method
 			beanDef.setBeanClassName(configClass.getMetadata().getClassName());
 			beanDef.setFactoryMethodName(methodName);
@@ -227,6 +232,7 @@ class ConfigurationClassBeanDefinitionReader {
 			beanDef.setFactoryBeanName(configClass.getBeanName());
 			beanDef.setUniqueFactoryMethodName(methodName);
 		}
+		// 设置自动装配模式为构造器注入
 		beanDef.setAutowireMode(AbstractBeanDefinition.AUTOWIRE_CONSTRUCTOR);
 		beanDef.setAttribute(org.springframework.beans.factory.annotation.RequiredAnnotationBeanPostProcessor.
 				SKIP_REQUIRED_CHECK_ATTRIBUTE, Boolean.TRUE);
@@ -265,6 +271,7 @@ class ConfigurationClassBeanDefinitionReader {
 		}
 
 		// Replace the original bean definition with the target one, if necessary
+		// 若需要作用域代理（如 request-scoped Bean），则创建代理 BeanDefinition
 		BeanDefinition beanDefToRegister = beanDef;
 		if (proxyMode != ScopedProxyMode.NO) {
 			BeanDefinitionHolder proxyDef = ScopedProxyCreator.createScopedProxy(
@@ -278,6 +285,7 @@ class ConfigurationClassBeanDefinitionReader {
 			logger.trace(String.format("Registering bean definition for @Bean method %s.%s()",
 					configClass.getMetadata().getClassName(), beanName));
 		}
+		// 最终注册 BeanDefinition
 		this.registry.registerBeanDefinition(beanName, beanDefToRegister);
 	}
 

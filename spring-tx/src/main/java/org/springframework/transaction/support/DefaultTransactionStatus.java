@@ -67,6 +67,10 @@ public class DefaultTransactionStatus extends AbstractTransactionStatus {
 	 */
 	private final boolean newTransaction;
 
+	/**
+	 * 是否注册了 TransactionSynchronizationManager，同步管理器用于事务钩子（如 afterCommit）。
+	 * 即是否是本方法负责事务同步的初始化（如绑定资源、触发同步回调）。
+	 */
 	private final boolean newSynchronization;
 
 	/**

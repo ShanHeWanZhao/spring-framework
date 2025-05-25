@@ -368,7 +368,23 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 		if (this.metadataReaderFactory instanceof CachingMetadataReaderFactory) {
 			// Clear cache in externally provided MetadataReaderFactory; this is a no-op
-			// for a shared cache since it'll be cleared by the ApplicationContext.
+			// for a shared cache since it'll be cleared by the ApplicationContext.---
+			//title: {{ title }}
+			//author: reef
+			//categories: Spring
+			//tags:
+			//- BeanPostProcessor
+			//summary: xxxxx
+			//date: {{ date }}
+			//updated: {{ date }}
+			//---
+			//
+			//---
+			//
+			//
+			//​	{{ title }}
+			//
+			//<!-- more -->
 			((CachingMetadataReaderFactory) this.metadataReaderFactory).clearCache();
 		}
 	}

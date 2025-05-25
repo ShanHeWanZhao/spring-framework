@@ -58,7 +58,7 @@ import org.springframework.validation.annotation.Validated;
  * @see javax.validation.executable.ExecutableValidator
  */
 @SuppressWarnings("serial")
-public class MethodValidationPostProcessor extends AbstractBeanFactoryAwareAdvisingPostProcessor
+public class  MethodValidationPostProcessor extends AbstractBeanFactoryAwareAdvisingPostProcessor
 		implements InitializingBean {
 
 	private Class<? extends Annotation> validatedAnnotationType = Validated.class;

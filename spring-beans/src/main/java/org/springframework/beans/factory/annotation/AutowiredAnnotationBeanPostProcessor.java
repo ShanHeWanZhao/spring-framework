@@ -444,7 +444,9 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 		do {
 			final List<InjectionMetadata.InjectedElement> currElements = new ArrayList<>();
 
+			// 字段处理
 			ReflectionUtils.doWithLocalFields(targetClass, field -> {
+				// 解析@Autowired，@Value，@javax.inject.Inject 注解字段元数据
 				AnnotationAttributes ann = findAutowiredAnnotation(field);
 				if (ann != null) {
 					// 静态字段不支持
@@ -454,11 +456,13 @@ public class AutowiredAnnotationBeanPostProcessor extends InstantiationAwareBean
 						}
 						return;
 					}
+					// 确定是否是required属性
 					boolean required = determineRequiredStatus(ann);
 					currElements.add(new AutowiredFieldElement(field, required));
 				}
 			});
 
+			// set方法处理
 			ReflectionUtils.doWithLocalMethods(targetClass, method -> {
 				Method bridgedMethod = BridgeMethodResolver.findBridgedMethod(method);
 				if (!BridgeMethodResolver.isVisibilityBridgeMethodPair(method, bridgedMethod)) {

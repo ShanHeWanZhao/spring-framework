@@ -622,16 +622,18 @@ public class CommonAnnotationBeanPostProcessor extends InitDestroyAnnotationBean
 		public ResourceElement(Member member, AnnotatedElement ae, @Nullable PropertyDescriptor pd) {
 			super(member, pd);
 			Resource resource = ae.getAnnotation(Resource.class);
+			// @Resource的name字段
 			String resourceName = resource.name();
 			Class<?> resourceType = resource.type();
 			this.isDefaultName = !StringUtils.hasLength(resourceName);
-			if (this.isDefaultName) {
+			if (this.isDefaultName) { // name字段为空
+				// 先获取这个字段名
 				resourceName = this.member.getName();
-				if (this.member instanceof Method && resourceName.startsWith("set") && resourceName.length() > 3) {
+				if (this.member instanceof Method && resourceName.startsWith("set") && resourceName.length() > 3) { // 注解在set方法上，则去掉前面的set，再将下个字母变为小写作为beanName
 					resourceName = Introspector.decapitalize(resourceName.substring(3));
 				}
 			}
-			else if (embeddedValueResolver != null) {
+			else if (embeddedValueResolver != null) { // 支持占位符解析
 				resourceName = embeddedValueResolver.resolveStringValue(resourceName);
 			}
 			if (Object.class != resourceType) {

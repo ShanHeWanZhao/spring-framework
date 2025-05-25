@@ -483,7 +483,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		}
 
 		TransactionStatus status = null;
-		if (txAttr != null) {
+		if (txAttr != null) { // 存在事物
 			if (tm != null) {
 				// 获取TransactionStatus
 				status = tm.getTransaction(txAttr);
@@ -629,6 +629,7 @@ public abstract class TransactionAspectSupport implements BeanFactoryAware, Init
 		@Nullable
 		private TransactionStatus transactionStatus;
 
+		// 上一个TransactionInfo，当前TransactionInfo使用完毕后需要需要恢复
 		@Nullable
 		private TransactionInfo oldTransactionInfo;
 

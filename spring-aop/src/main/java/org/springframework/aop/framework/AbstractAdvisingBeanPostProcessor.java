@@ -34,9 +34,12 @@ import org.springframework.lang.Nullable;
 @SuppressWarnings("serial")
 public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSupport implements BeanPostProcessor {
 
+	// 由子类设置的advisor
 	@Nullable
 	protected Advisor advisor;
 
+	// 是否需要将advisor放在整个代理链的最前，以达到最先执行的目的
+	// 很有用，@Async会设置成true，从而让异步在第一个切面就开启，避免代理链在不同线程间切换
 	protected boolean beforeExistingAdvisors = false;
 
 	private final Map<Class<?>, Boolean> eligibleBeans = new ConcurrentHashMap<>(256);
@@ -68,25 +71,25 @@ public abstract class AbstractAdvisingBeanPostProcessor extends ProxyProcessorSu
 			return bean;
 		}
 
-		/* 判断当前的bean是否已经是个代理类了
-				已经是代理类的bean，就不需要再重新创建proxy，直接用现有的，把advisor加入到list中就行
-		 */
+		// 判断当前的bean是否已经是个代理类了
+		// 已经是代理类的bean，就不需要再重新创建proxy，直接用现有的，把advisor加入到list中就行
 		if (bean instanceof Advised) {
 			Advised advised = (Advised) bean;
 			// 只有再当前proxy未frozen的情况下，且原始bean支持被代理才需要增强
-			// 如果一个proxy被frozen了，代表已经不能修改了，其他需要的地方也可以缓存了
 			if (!advised.isFrozen() && isEligible(AopUtils.getTargetClass(bean))) {
 				// Add our local Advisor to the existing proxy's Advisor chain...
-				if (this.beforeExistingAdvisors) {
+				if (this.beforeExistingAdvisors) { // 放最前面，最先执行
 					advised.addAdvisor(0, this.advisor);
 				}
-				else {
+				else { // 否则放最后
 					advised.addAdvisor(this.advisor);
 				}
 				return bean;
 			}
 		}
 
+		// ======== 走到这表示这个bean没被代理或代理已被冻结，新开一个代理再包装这个bean，可能造成层层代理 =============
+		// 判断当前的advisor能否对这个bean增强
 		if (isEligible(bean, beanName)) {
 			ProxyFactory proxyFactory = prepareProxyFactory(bean, beanName);
 			if (!proxyFactory.isProxyTargetClass()) {

@@ -415,9 +415,10 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 	private Set<BeanDefinition> scanCandidateComponents(String basePackage) {
 		Set<BeanDefinition> candidates = new LinkedHashSet<>();
 		try {
-			// 例如扫描com.litb.business.pms包 -> classpath*:com/litb/business/pms/**/*.class
+			// 例如扫描site.shanzhao包 -> classpath*:site/shanzhao/**/*.class
 			String packageSearchPath = ResourcePatternResolver.CLASSPATH_ALL_URL_PREFIX +
 					resolveBasePackage(basePackage) + '/' + this.resourcePattern;
+			// 上述指定路径下的每个class文件将被封装成Resource对象并返回
 			Resource[] resources = getResourcePatternResolver().getResources(packageSearchPath);
 			boolean traceEnabled = logger.isTraceEnabled();
 			boolean debugEnabled = logger.isDebugEnabled();
@@ -427,12 +428,13 @@ public class ClassPathScanningCandidateComponentProvider implements EnvironmentC
 				}
 				if (resource.isReadable()) {
 					try {
-						// 使用asm直接将字节码的信息解析出来（包括所有注解（父注解等））
+						// 不使用反射，使用asm直接将字节码的信息解析出来（包括所有注解（父注解等））
 						MetadataReader metadataReader = getMetadataReaderFactory().getMetadataReader(resource);
-						// 对metaData进行判断，是否纳入容器中
+						// 对metaData进行判断，是否纳入容器中（@Component、@ManagedBean、@Named判断）
 						if (isCandidateComponent(metadataReader)) {
 							ScannedGenericBeanDefinition sbd = new ScannedGenericBeanDefinition(metadataReader);
 							sbd.setSource(resource);
+							// 再次校验是否为合法的候选组件（必须是具体类，不能是接口、抽象类、内部类等）
 							if (isCandidateComponent(sbd)) {
 								if (debugEnabled) {
 									logger.debug("Identified candidate component class: " + resource);

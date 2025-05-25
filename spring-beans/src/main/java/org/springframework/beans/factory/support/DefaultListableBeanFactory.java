@@ -1214,7 +1214,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			// 根据解析器来判断当前依赖是否需要懒加载（返回的result为null，则代表不需要）
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
 					descriptor, requestingBeanName);
-			if (result == null) {
+			if (result == null) { // 不走懒加载，直接创建bean
 				result = doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
 			}
 			return result;
